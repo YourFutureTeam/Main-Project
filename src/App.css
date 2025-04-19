@@ -29,15 +29,6 @@
   font-weight: 600;
 }
 
-/* --- Общие стили для контейнеров контента вкладок --- */
-.tab-content-area {
-  /* Можно добавить стили, если нужно, например, отступы */
-}
-.startups-content, .meetups-content {
-    /* Стили специфичные для контента вкладок */
-}
-
-
 /* --- Общий стиль для кнопок добавления --- */
 .add-button {
   display: block;
@@ -561,12 +552,6 @@ h1 {
     color: #555;
 }
 
-
-/* --- Стили для карточки Вакансии --- */
-.vacancy-card {
-    /* Наследует стили .card */
-}
-
 .vacancy-header {
     display: flex;
     justify-content: space-between;
@@ -783,4 +768,185 @@ h1 {
     font-size: 0.9em;
     margin-top: 5px;
 }
+
+/* src/App.css */
+
+/* ... (все предыдущие стили CSS) ... */
+
+/* --- Стили для блока действий внизу карточки стартапа --- */
+.card-actions {
+  margin-top: 15px; /* Отступ сверху */
+  padding-top: 15px;
+  border-top: 1px solid #eee; /* Разделитель */
+  display: flex;
+  /* Разносим кнопки по краям, если их две (Ред. + OpenSea) */
+  justify-content: space-between;
+  /* Выравниваем по центру вертикально */
+  align-items: center;
+  gap: 10px; /* Пространство между кнопками, если они окажутся рядом */
+  min-height: 36px; /* Стабильная высота блока */
+  flex-wrap: wrap; /* Разрешаем перенос на маленьких экранах */
+}
+
+/* Общий стиль для кнопок-ссылок в действиях */
+.card-actions .button-link {
+    /* Наследует основные стили .button-link (padding, border-radius и т.д.) */
+    flex-shrink: 0; /* Предотвращаем сжатие кнопок */
+}
+
+
+/* --- Стили для кнопки "Ред. средства" --- */
+/* Имеет классы .button-edit и .button-link-secondary */
+
+
+/* Основной вид кнопки Редактирования (как вторичной) */
+.button-link-secondary {
+    background-color: #6c757d; /* Серый фон */
+    color: white;
+    border: 1px solid #6c757d; /* Добавим границу того же цвета */
+    padding: 8px 14px;      /* Немного настроим отступы */
+    font-size: 0.85em;      /* Сделаем текст чуть меньше */
+    font-weight: 500;
+    /* Наследует border-radius, text-decoration, cursor, transition от .button-link */
+}
+/* Состояние при наведении */
+.button-link-secondary:hover:not(:disabled) {
+    background-color: #5a6268; /* Темнее серый */
+    border-color: #545b62;
+    color: white;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); /* Легкая тень */
+}
+/* Состояние при блокировке */
+.button-link-secondary:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+
+/* Стили для кнопки/ссылки OpenSea (убедись, что они есть) */
+.opensea-button {
+    background-color: #2081e2; /* Цвет OpenSea */
+    color: white;
+    border-color: #2081e2;
+     padding: 8px 16px; /* Могут быть свои отступы */
+     font-size: 0.9em; /* Свой размер шрифта */
+}
+.opensea-button:hover {
+    background-color: #1868b7;
+    border-color: #1868b7;
+    color: white;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* ... (остальные стили) ... */
+/* src/App.css */
+
+/* ... (все предыдущие стили) ... */
+
+/* --- Стили для формы РЕДАКТИРОВАНИЯ СРЕДСТВ внутри карточки --- */
+/* Контейнер формы */
+.funds-edit-form {
+  margin-top: 10px; /* Небольшой отступ сверху */
+  padding: 10px;    /* Небольшой внутренний отступ */
+  background-color: #f8f9fa; /* Очень светлый фон, чтобы слегка выделить */
+  border-radius: 4px;
+  border: 1px solid #e9ecef; /* Тонкая светлая граница */
+}
+
+/* Группа "Метка + Поле ввода" для каждой валюты */
+.fund-input-group {
+  display: flex;
+  align-items: center; /* Выравниваем метку и поле по вертикали */
+  margin-bottom: 10px; /* Отступ между полями */
+  gap: 8px; /* Пространство между меткой и полем */
+}
+/* Последнему элементу убираем нижний отступ */
+.fund-input-group:last-of-type {
+  margin-bottom: 0;
+}
+
+/* Метка валюты (ETH:, BTC:, USDT:) */
+.fund-input-group label {
+  font-weight: 500;
+  width: 40px; /* Фиксированная ширина для выравнивания */
+  text-align: right;
+  font-size: 0.95em;
+  color: #495057; /* Темно-серый */
+  flex-shrink: 0; /* Не сжимать метку */
+}
+
+/* Поле ввода суммы */
+.fund-input-group input[type="text"] {
+  flex-grow: 1; /* Занимает оставшееся место */
+  padding: 8px 10px; /* Комфортные отступы */
+  border: 1px solid #ced4da; /* Стандартная граница */
+  border-radius: 4px;
+  font-size: 1em; /* Нормальный размер шрифта */
+  line-height: 1.4;
+  /* Стили при фокусе - как у других полей */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.fund-input-group input[type="text"]:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+/* Стиль заблокированного поля */
+.fund-input-group input[type="text"]:disabled {
+  background-color: #e9ecef;
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+
+/* Контейнер для кнопок "Сохранить" и "Отмена" в форме */
+.edit-form-buttons {
+  margin-top: 15px; /* Отступ над кнопками */
+  padding-top: 10px; /* Доп. отступ сверху */
+  border-top: 1px solid #e9ecef; /* Разделитель */
+  display: flex;
+  justify-content: flex-end; /* Кнопки справа */
+  gap: 10px; /* Пространство между кнопками */
+}
+
+/* Общие стили для кнопок */
+.edit-form-buttons button {
+  padding: 7px 15px; /* Размер кнопок */
+  font-size: 0.9em;   /* Шрифт кнопок */
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent; /* Добавляем границу для консистентности */
+  font-weight: 500;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, opacity 0.2s ease;
+}
+/* Стили для заблокированных кнопок */
+.edit-form-buttons button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Кнопка "Сохранить" */
+.button-save {
+  background-color: #28a745; /* Зеленый */
+  color: white;
+  border-color: #28a745;
+}
+.button-save:hover:not(:disabled) {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+/* Кнопка "Отмена" */
+.button-cancel {
+  background-color: #f8f9fa; /* Светлый */
+  color: #343a40; /* Темный текст */
+  border-color: #ced4da; /* Серая граница */
+}
+.button-cancel:hover:not(:disabled) {
+  background-color: #e2e6ea;
+  border-color: #adb5bd;
+}
+
+/* ... (остальные стили) ... */
+
 
