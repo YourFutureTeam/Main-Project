@@ -1,5 +1,160 @@
 /* src/App.css */
-/* src/App.css */
+
+/* --- Стили для навигации по вкладкам --- */
+.tabs-navigation {
+  margin-bottom: 30px;
+  border-bottom: 1px solid #dee2e6;
+  display: flex;
+}
+
+.tab-button {
+  padding: 10px 20px;
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  font-size: 1.1em;
+  color: #495057;
+  margin-bottom: -1px; /* Чтобы активная граница перекрывала общую */
+  border-bottom: 3px solid transparent; /* Неактивная граница */
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.tab-button:hover {
+  color: #007bff; /* Цвет при наведении */
+}
+
+.tab-button.active {
+  color: #007bff; /* Цвет активной вкладки */
+  border-bottom-color: #007bff; /* Активная граница */
+  font-weight: 600;
+}
+
+/* --- Общие стили для контейнеров контента вкладок --- */
+.tab-content-area {
+  /* Можно добавить стили, если нужно, например, отступы */
+}
+.startups-content, .meetups-content {
+    /* Стили специфичные для контента вкладок */
+}
+
+
+/* --- Общий стиль для кнопок добавления --- */
+.add-button {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 30px auto; /* Центрирование и отступ снизу */
+  padding: 12px 25px;
+  font-size: 1.1em;
+  background-color: #27ae60; /* Зеленый цвет */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.add-button:hover {
+  background-color: #229954;
+}
+.add-button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+/* Кнопка добавления стартапа теперь ПОСЛЕ поиска */
+.add-startup-button {
+    margin-top: 20px; /* Добавим отступ сверху, если нужно */
+}
+
+
+/* --- Общий стиль для форм добавления --- */
+.add-form { /* Общий класс для add-startup-form и add-meetup-form */
+  background-color: #ecf0f1;
+  padding: 25px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border: 1px solid #dfe4e8;
+  max-width: 700px; /* Ограничим ширину форм */
+  margin-left: auto;
+  margin-right: auto;
+}
+.add-form h3 {
+  margin-top: 0; margin-bottom: 20px; text-align: center; color: #2c3e50;
+}
+.add-form input[type="text"],
+.add-form input[type="url"],
+.add-form input[type="datetime-local"], /* Стили для инпута даты */
+.add-form textarea {
+  display: block; width: 100%; padding: 12px; margin-bottom: 15px;
+  border: 1px solid #bdc3c7; border-radius: 4px; font-size: 1em; box-sizing: border-box;
+}
+.add-form textarea { min-height: 80px; resize: vertical; }
+.add-form .form-buttons { display: flex; justify-content: center; gap: 15px; margin-top: 10px; }
+.add-form button { padding: 10px 20px; font-size: 1em; border-radius: 4px; cursor: pointer; border: none; transition: background-color 0.2s ease, box-shadow 0.2s ease; }
+.add-form button[type="submit"] { background-color: #2ecc71; color: white; }
+.add-form button[type="submit"]:hover { background-color: #27ae60; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.add-form .cancel-button { background-color: #e74c3c; color: white; }
+.add-form .cancel-button:hover { background-color: #c0392b; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
+/* Стили для инпута даты */
+.input-datetime {
+    /* Можно добавить стили, чтобы он выглядел консистентно */
+    appearance: none; /* Убираем стандартный вид в некоторых браузерах */
+}
+
+
+/* --- Общий стиль для списков карточек --- */
+.card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* Немного увеличим мин. ширину */
+  gap: 25px;
+  margin-bottom: 40px;
+}
+
+
+/* --- Стили для карточки Митапа --- */
+.meetup-card .card-header {
+    /* Можно настроить специфичные стили для шапки митапа */
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap; /* Перенос даты на маленьких экранах */
+    gap: 10px;
+}
+
+.meetup-date {
+  font-size: 0.85em;
+  color: #7f8c8d;
+  white-space: nowrap; /* Предотвратить перенос самой даты */
+}
+
+.meetup-link {
+  margin-top: 15px; /* Отступ перед ссылкой */
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.meetup-link a {
+  color: #3498db;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.meetup-link a:hover {
+  text-decoration: underline;
+  color: #2980b9;
+}
+
+/* Добавим стиль для админской пометки в шапке */
+.user-info .user-greeting span:last-of-type { /* Стиль для (Админ) */
+    font-weight: normal;
+    font-style: italic;
+    color: #95a5a6;
+    margin-left: 5px;
+}
+
+
+/* --- Остальные стили (app-container, card, investment-form и т.д. остаются) --- */
+
+
 
 /* --- Стили для шапки приложения --- */
 .app-header {
@@ -386,3 +541,158 @@ h1 {
      text-align: center;
      margin-top: 5px;
 }
+
+/* src/App.css */
+
+/* ... (стили для .tabs-navigation, .tab-button - без изменений) ... */
+
+/* ... (стили для .add-button, .add-form - без изменений) ... */
+/* Стили для селекта стартапа в форме вакансии */
+.add-vacancy-form select {
+  display: block; width: 100%; padding: 12px; margin-bottom: 15px;
+  border: 1px solid #bdc3c7; border-radius: 4px; font-size: 1em; box-sizing: border-box;
+  background-color: white; /* Фон для селекта */
+}
+.add-vacancy-form label[for="startup-select"] {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #555;
+}
+
+
+/* --- Стили для карточки Вакансии --- */
+.vacancy-card {
+    /* Наследует стили .card */
+}
+
+.vacancy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Заголовки сверху */
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px dashed #eee;
+}
+
+.vacancy-title-startup .card-title {
+    margin-bottom: 3px; /* Уменьшить отступ под заголовком вакансии */
+}
+.vacancy-startup-name {
+    font-size: 0.9em;
+    color: #7f8c8d;
+}
+
+.vacancy-salary {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #16a085; /* Зеленый для зарплаты */
+    white-space: nowrap;
+}
+
+.vacancy-section {
+    margin-bottom: 15px;
+}
+.vacancy-section h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+    color: #34495e;
+    border-bottom: 1px solid #ecf0f1;
+    padding-bottom: 4px;
+}
+.vacancy-section p {
+    margin: 0;
+    font-size: 0.95em;
+    line-height: 1.5;
+    color: #555;
+}
+
+.applicant-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.applicant-tag {
+    background-color: #ecf0f1;
+    color: #7f8c8d;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+.vacancy-actions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    text-align: right; /* Кнопка справа */
+}
+
+.apply-button {
+  padding: 8px 18px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95em;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+.apply-button:hover:not(:disabled) {
+  background-color: #2980b9;
+}
+.apply-button:disabled,
+.apply-button.applied { /* Стиль для блокированной и уже примененной кнопки */
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ... (остальные стили) ... */
+
+/* src/App.css */
+
+/* ... (все предыдущие стили) ... */
+
+/* --- Стили для карточки Вакансии (дополнения) --- */
+.vacancy-applicants h4 {
+  display: flex;
+  justify-content: space-between; /* Разносим заголовок и доп. текст */
+  align-items: baseline;
+}
+.vacancy-applicants h4 span { /* Стиль для "(детали доступны создателю)" */
+  font-size: 0.8em;
+  font-weight: normal;
+  font-style: italic;
+  color: #95a5a6;
+}
+
+.vacancy-applicants p { /* Стиль для сообщений "Пока никто..." и "Список виден..." */
+  font-style: italic;
+  color: #6c757d;
+  font-size: 0.9em;
+}
+
+.applicant-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.applicant-tag {
+  background-color: #e9ecef; /* Чуть темнее */
+  color: #495057; /* Темнее текст */
+  padding: 4px 10px;
+  border-radius: 12px; /* Более круглые */
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+/* ... (остальные стили) ... */
+

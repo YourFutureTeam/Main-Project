@@ -93,7 +93,7 @@ export function Auth({ onLoginSuccess }) {
 
       if (isLogin) {
         // Успешный вход - вызываем колбэк и передаем токен и имя
-        onLoginSuccess(data.access_token, data.username);
+        onLoginSuccess(data.access_token, data.username, data.role);
       } else {
         // Успешная регистрация - переключаем на форму входа
         setIsLogin(true);
