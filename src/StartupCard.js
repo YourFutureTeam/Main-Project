@@ -1,24 +1,22 @@
 // src/StartupCard.js
 import React from 'react';
 
-// Функция для форматирования и отображения собранных средств
+// Функция рендеринга средств остается прежней
 const renderFunds = (funds) => {
-  // Фильтруем валюты, где собрано больше нуля, или показываем все
-  const entries = Object.entries(funds)
-    //.filter(([currency, amount]) => amount > 0); // Раскомментируйте, чтобы скрыть нулевые
-
-  if (entries.length === 0) {
+  // ... (код renderFunds без изменений) ...
+  const entries = Object.entries(funds);
+  if (entries.length === 0 || entries.every(e => e[1] <=0) ) { // Показать, если все нули или пусто
     return <span>Пока не собрано</span>;
   }
-
-  return entries.map(([currency, amount], index) => (
+  return entries
+    .filter(([_, amount]) => amount > 0) // Показываем только ненулевые балансы
+    .map(([currency, amount], index) => (
     <span key={currency} style={{ marginRight: '10px', display: 'inline-block', whiteSpace: 'nowrap' }}>
-       {/* Добавляем разделитель, кроме первого элемента */}
-      {/* {index > 0 && ', '} */}
       <strong style={{ color: '#16a085' }}>{amount.toLocaleString()}</strong> {currency}
     </span>
   ));
 };
+
 
 function StartupCard({ startup, isSelected, onClick }) {
   return (
@@ -26,11 +24,15 @@ function StartupCard({ startup, isSelected, onClick }) {
       className={`card ${isSelected ? 'selected' : ''}`}
       onClick={onClick}
     >
-      <div className="card-title">{startup.name}</div>
+      <div className="card-header"> {/* Добавляем обертку для заголовка и создателя */}
+          <div className="card-title">{startup.name}</div>
+          {/* Отображаем имя создателя */}
+          <div className="card-creator">от {startup.creator_username || 'Система'}</div>
+      </div>
       <div className="card-description">{startup.description}</div>
       <div className="card-funds">
-        <strong>Собрано:</strong><br/> {/* Добавляем заголовок и перенос строки */}
-        {renderFunds(startup.funds_raised || {})} {/* Передаем объект средств */}
+        <strong>Собрано:</strong><br/>
+        {renderFunds(startup.funds_raised || {})}
       </div>
     </div>
   );

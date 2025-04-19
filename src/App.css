@@ -1,4 +1,105 @@
 /* src/App.css */
+/* src/App.css */
+
+/* --- Стили для шапки приложения --- */
+.app-header {
+  display: flex;
+  justify-content: space-between; /* Элементы по краям */
+  align-items: center; /* Вертикальное выравнивание по центру */
+  margin-bottom: 35px; /* Увеличим немного отступ снизу */
+  padding: 15px 20px; /* Добавим внутренние отступы */
+  background-color: #ffffff; /* Белый фон для шапки */
+  border-radius: 8px; /* Скругленные углы, как у карточек */
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07); /* Легкая тень */
+  flex-wrap: wrap; /* Перенос на маленьких экранах */
+  gap: 15px; /* Пространство между элементами при переносе */
+}
+
+/* Убираем нижнюю границу, так как есть фон и тень */
+/* border-bottom: 1px solid #eee; */
+
+
+.app-header h1 {
+  margin: 0; /* Убираем внешние отступы у заголовка */
+  font-size: 1.8em; /* Чуть крупнее */
+  color: #2c3e50; /* Темно-синий цвет */
+  flex-shrink: 0; /* Заголовок не будет сжиматься */
+}
+
+/* Блок информации о пользователе */
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Пространство между приветствием и кнопкой */
+  background-color: #f8f9fa; /* Очень светлый фон для выделения */
+  padding: 8px 15px; /* Внутренние отступы */
+  border-radius: 20px; /* Сильно скругленные края (форма пилюли) */
+  border: 1px solid #e9ecef; /* Тонкая светлая граница */
+}
+
+/* Стиль для текста приветствия */
+.user-greeting {
+  font-size: 0.95em;
+  color: #495057; /* Приглушенный темно-серый */
+}
+
+/* Стиль для имени пользователя внутри приветствия */
+.user-greeting span {
+  font-weight: 600; /* Полужирный */
+  color: #343a40; /* Более темный серый */
+}
+
+/* Новые стили для кнопки Выйти */
+.logout-button {
+  background: none; /* Убираем фон */
+  border: none; /* Убираем границу */
+  color: #6c757d; /* Спокойный серый цвет */
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500; /* Средняя жирность */
+  padding: 5px; /* Уменьшаем паддинг */
+  transition: color 0.2s ease;
+  /* Можно добавить иконку через ::before или background-image, если нужно */
+}
+
+.logout-button:hover {
+  color: #e74c3c; /* Красный цвет при наведении для акцента на действии */
+  text-decoration: underline; /* Подчеркивание при наведении */
+}
+
+/* --- Контейнер для поля поиска --- */
+.search-container {
+  margin-bottom: 30px; /* Отступ снизу перед списком стартапов */
+  max-width: 600px; /* Ограничим ширину поля поиска */
+  margin-left: auto; /* Центрируем, если контейнер .app-container шире */
+  margin-right: auto;
+}
+
+/* --- Поле ввода для поиска --- */
+.search-input {
+  width: 100%; /* Занимает всю ширину контейнера */
+  padding: 12px 15px; /* Внутренние отступы */
+  border: 1px solid #ced4da; /* Светло-серая граница */
+  border-radius: 6px; /* Слегка скругленные углы */
+  font-size: 1em;
+  box-sizing: border-box; /* padding и border включаются в ширину */
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: #80bdff; /* Голубая граница при фокусе */
+  outline: 0; /* Убираем стандартный outline */
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25); /* Легкая тень при фокусе */
+}
+
+/* --- Сообщение "Ничего не найдено" --- */
+.no-results-message {
+    text-align: center;
+    color: #6c757d; /* Серый цвет */
+    margin-top: 20px;
+    font-style: italic;
+}
+
 body {
   font-family: sans-serif;
   background-color: #f4f7f6;

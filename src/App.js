@@ -1,21 +1,23 @@
 // src/App.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import StartupCard from './StartupCard';
-import './App.css';
+import { Auth } from './Auth'; // Импортируем компонент аутентификации
+import './App.css'; // Основные стили остаются
 
-// --- Компонент формы добавления стартапа ---
-function AddStartupForm({ onAdd, onCancel }) {
+// --- Компонент формы добавления стартапа (без изменений) ---
+function AddStartupForm({ onAdd, onCancel, isLoading }) {
+    // ... (код AddStartupForm без изменений, можно добавить isLoading для кнопки) ...
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
 
     const handleSubmit = (e) => {
-        e.preventDefault(); // Предотвращаем перезагрузку страницы
+        e.preventDefault();
         if (!name.trim() || !description.trim()) {
             alert('Пожалуйста, заполните имя и описание стартапа.');
             return;
         }
-        onAdd({ name, description }); // Вызываем колбэк добавления
-        setName(''); // Очищаем поля
+        onAdd({ name, description });
+        setName('');
         setDescription('');
     };
 
@@ -23,192 +25,295 @@ function AddStartupForm({ onAdd, onCancel }) {
         <form onSubmit={handleSubmit} className="add-startup-form">
             <h3>Добавить новый стартап</h3>
             <input
-                type="text"
-                placeholder="Название стартапа"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
+                type="text" placeholder="Название стартапа" value={name}
+                onChange={(e) => setName(e.target.value)} required disabled={isLoading}
             />
             <textarea
-                placeholder="Краткое описание"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                required
+                placeholder="Краткое описание" value={description}
+                onChange={(e) => setDescription(e.target.value)} required disabled={isLoading}
             />
             <div className="form-buttons">
-                <button type="submit">Добавить стартап</button>
-                <button type="button" onClick={onCancel} className="cancel-button">Отмена</button>
+                <button type="submit" disabled={isLoading}>{isLoading ? 'Добавление...' : 'Добавить стартап'}</button>
+                <button type="button" onClick={onCancel} className="cancel-button" disabled={isLoading}>Отмена</button>
             </div>
         </form>
     );
 }
 
-
-// --- Основной компонент приложения ---
-function App() {
-  // Используем массив для стартапов, т.к. бэкенд теперь возвращает список
+// --- Основное содержимое приложения (когда пользователь вошел) ---
+function AppContent({ token, username, onLogout }) {
   const [startups, setStartups] = useState([]);
   const [selectedStartupId, setSelectedStartupId] = useState(null);
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('ETH');
   const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState(''); // 'success' или 'error'
-  const [showAddForm, setShowAddForm] = useState(false); // Состояние для показа формы добавления
+  const [messageType, setMessageType] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [loading, setLoading] = useState(false); // Общий индикатор загрузки для действий
+  const [fetchError, setFetchError] = useState(''); // Ошибка загрузки стартапов
+  // ---> ДОБАВЛЕНО: Состояние для поискового запроса <---
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // Функция для отображения сообщений
   const showMessage = (text, type) => {
-    setMessage(text);
-    setMessageType(type);
-    setTimeout(() => { setMessage(''); setMessageType(''); }, 5000);
+      setMessage(text);
+      setMessageType(type);
+      setTimeout(() => { setMessage(''); setMessageType(''); }, 5000);
   };
+
+   // --- Обертка для fetch с добавлением токена ---
+  const authFetch = useCallback(async (url, options = {}) => {
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+        'Authorization': `Bearer ${token}` // Токен должен быть здесь
+    };
+
+    console.log(`AuthFetch to ${url}: Method=${options.method || 'GET'}, Headers=`, headers);
+
+    try {
+        const response = await fetch(`http://127.0.0.1:5000${url}`, { ...options, headers });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 422) {
+                console.error(`AuthFetch Error ${response.status} to ${url}, logging out.`);
+                onLogout();
+                throw new Error(data.error || data.message || data.msg || "Сессия недействительна. Выполнен выход.");
+            }
+            throw new Error(data.error || data.message || data.msg || `Ошибка сервера ${response.status}`);
+        }
+        return data;
+    } catch (error) {
+        console.error('AuthFetch failed:', error);
+        throw (error instanceof Error ? error : new Error(error || 'Неизвестная ошибка сети'));
+    }
+
+  }, [token, onLogout]);
+
 
   // Загрузка списка стартапов
-  const fetchStartups = () => {
-    // Указываем полный URL, так как убрали proxy из package.json
-    fetch('http://127.0.0.1:5000/startups')
-      .then(response => {
-        if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
-        return response.json();
-      })
-      .then(data => setStartups(data)) // data теперь массив
-      .catch(error => showMessage(`Ошибка загрузки стартапов: ${error.message}`, 'error'));
-  };
+  const fetchStartups = useCallback(() => {
+      setLoading(true);
+      setFetchError('');
+      fetch('http://127.0.0.1:5000/startups')
+        .then(response => {
+          if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
+          return response.json();
+        })
+        .then(data => setStartups(data))
+        .catch(error => {
+            console.error("Ошибка загрузки стартапов:", error);
+            setFetchError(`Не удалось загрузить стартапы: ${error.message}`);
+        })
+        .finally(() => setLoading(false));
+    }, []); // Зависимости не нужны, если fetch URL статичен
 
-  // Загружаем стартапы при первом рендере
   useEffect(() => {
-    fetchStartups();
-  }, []);
+      fetchStartups();
+  }, [fetchStartups]);
 
-  // Обработчик выбора стартапа
   const handleSelectStartup = (startupId) => {
-    setSelectedStartupId(startupId);
-    setMessage('');
+      setSelectedStartupId(startupId);
+      setMessage('');
   };
 
-  // Обработчик инвестирования
-  const handleInvest = () => {
-    // ... (логика валидации остается прежней) ...
-     if (!selectedStartupId) {
-      showMessage('Пожалуйста, выберите стартап, кликнув на его карточку', 'error');
-      return;
-    }
-    if (!amount) {
-        showMessage('Пожалуйста, введите сумму инвестиции', 'error');
-      return;
-    }
-    const investmentAmount = parseFloat(amount);
-    if (isNaN(investmentAmount) || investmentAmount <= 0) {
-      showMessage('Пожалуйста, введите корректную положительную сумму инвестиции', 'error');
-      return;
-    }
+  // Обработчик инвестирования (использует authFetch)
+  const handleInvest = async () => {
+      if (!selectedStartupId || !amount) return;
+      const investmentAmount = parseFloat(amount);
+       if (isNaN(investmentAmount) || investmentAmount <= 0) {
+          showMessage('Введите корректную положительную сумму', 'error');
+          return;
+       }
 
-    // Отправляем POST-запрос на инвестирование
-    fetch('http://127.0.0.1:5000/invest', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        startup_id: parseInt(selectedStartupId), // Убедимся что ID это число
-        amount: investmentAmount,
-        currency
-      })
-    })
-      .then(response => response.json().then(data => ({ status: response.status, body: data })))
-      .then(({ status, body }) => {
-        if (status >= 400) { throw new Error(body.error || `Ошибка сервера ${status}`); }
-
-        // Обновляем состояние *локально* или перезапрашиваем все стартапы
-        // Проще перезапросить для синхронизации
-        fetchStartups();
-        showMessage(`Инвестиция в стартап #${selectedStartupId} на сумму ${investmentAmount} ${currency} прошла успешно!`, 'success');
-        setAmount(''); // Очистка поля суммы
-        // Можно сбросить выбор стартапа после инвестиции, если нужно
-        // setSelectedStartupId(null);
-      })
-      .catch(error => showMessage(`Ошибка инвестирования: ${error.message}`, 'error'));
+      setLoading(true);
+      try {
+          const data = await authFetch('/invest', {
+              method: 'POST',
+              body: JSON.stringify({
+                  startup_id: parseInt(selectedStartupId),
+                  amount: investmentAmount,
+                  currency
+              })
+          });
+          showMessage(data.message || 'Инвестиция прошла успешно!', 'success');
+          setAmount('');
+          fetchStartups(); // Обновляем список
+      } catch (error) {
+          showMessage(`Ошибка инвестирования: ${error.message}`, 'error');
+      } finally {
+          setLoading(false);
+      }
   };
 
-  // Обработчик добавления нового стартапа
-  const handleAddStartup = (startupData) => {
-    fetch('http://127.0.0.1:5000/startups', { // POST запрос на /startups
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(startupData) // Отправляем name и description
-    })
-    .then(response => response.json().then(data => ({ status: response.status, body: data })))
-    .then(({ status, body }) => {
-        if (status >= 400) { throw new Error(body.error || `Ошибка сервера ${status}`); }
-
-        showMessage(body.message || 'Стартап успешно добавлен!', 'success');
-        fetchStartups(); // Перезагружаем список стартапов
-        setShowAddForm(false); // Скрываем форму после успеха
-    })
-    .catch(error => showMessage(`Ошибка добавления стартапа: ${error.message}`, 'error'));
+  // Обработчик добавления стартапа (использует authFetch)
+  const handleAddStartup = async (startupData) => {
+      setLoading(true);
+      try {
+          const data = await authFetch('/startups', {
+              method: 'POST',
+              body: JSON.stringify(startupData)
+          });
+          showMessage(data.message || 'Стартап успешно добавлен!', 'success');
+          fetchStartups(); // Обновляем список
+          setShowAddForm(false); // Скрываем форму
+      } catch (error) {
+          showMessage(`Ошибка добавления стартапа: ${error.message}`, 'error');
+      } finally {
+          setLoading(false);
+      }
   };
 
+  // ---> ДОБАВЛЕНО: Логика фильтрации стартапов <---
+  const filteredStartups = startups.filter(startup =>
+      startup.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
-  // Получаем информацию о выбранном стартапе из массива
+  // Ищем выбранный стартап в *исходном* массиве, чтобы инфо не пропадало при фильтрации
   const selectedStartupInfo = selectedStartupId
-        ? startups.find(s => s.id === parseInt(selectedStartupId)) // Ищем по id в массиве
-        : null;
+      ? startups.find(s => s.id === parseInt(selectedStartupId))
+      : null;
 
+
+  // --- Начало JSX разметки ---
   return (
-    <div className="app-container">
-      <h1>Инвестируйте в Будущее с Криптовалютой</h1>
-
-      {/* Кнопка и форма добавления стартапа */}
-      {!showAddForm && (
-          <button onClick={() => setShowAddForm(true)} className="add-startup-button">
-              + Добавить новый стартап
-          </button>
-      )}
-      {showAddForm && (
-          <AddStartupForm
-              onAdd={handleAddStartup}
-              onCancel={() => setShowAddForm(false)}
-          />
-      )}
-
-
-      {/* Список карточек стартапов */}
-      <div className="startup-list">
-        {/* startups теперь массив, итерируемся по нему */}
-        {startups.map((startup) => (
-          <StartupCard
-            key={startup.id} // Используем ID из данных стартапа
-            startup={startup}
-            isSelected={selectedStartupId === startup.id.toString()} // Сравниваем ID (приводим к строке на всякий случай)
-            onClick={() => handleSelectStartup(startup.id.toString())} // Передаем ID как строку или число
-          />
-        ))}
-      </div>
-
-      {/* Форма для инвестирования */}
-      <div className="investment-form">
-        <label htmlFor="amount">Сумма:</label>
-        <input
-          id="amount" type='number' placeholder='0.00' value={amount}
-          onChange={e => setAmount(e.target.value)} min="0"
-          disabled={!selectedStartupId}
-        />
-        <label htmlFor="currency">Валюта:</label>
-        <select id="currency" value={currency} onChange={e => setCurrency(e.target.value)} disabled={!selectedStartupId}>
-          <option value='ETH'>ETH</option>
-          <option value='BTC'>BTC</option>
-          <option value='USDT'>USDT</option>
-        </select>
-        <button onClick={handleInvest} disabled={!selectedStartupId || !amount}>Инвестировать</button>
-        {selectedStartupInfo && (
-          <div className="selected-startup-info">
-            Выбрано: <span>{selectedStartupInfo.name}</span>
+      <div className="app-container">
+          {/* Шапка приложения */}
+          <div className="app-header">
+               <h1>Инвестируйте в Будущее!</h1>
+               <div className="user-info">
+                  <span className="user-greeting">Привет, <span>{username}!</span></span>
+                  <button onClick={onLogout} className="logout-button">Выйти</button>
+               </div>
           </div>
-        )}
-      </div>
 
-      {/* Сообщения */}
-      {message && <p className={`message ${messageType}`}>{message}</p>}
-    </div>
+          {/* Сообщение об ошибке загрузки */}
+          {fetchError && <p className="message error">{fetchError}</p>}
+
+          {/* Кнопка и форма добавления стартапа */}
+          {!showAddForm && (
+              <button onClick={() => setShowAddForm(true)} className="add-startup-button" disabled={loading}>
+                  + Добавить новый стартап
+              </button>
+          )}
+          {showAddForm && (
+              // Предполагается, что компонент AddStartupForm определен выше или импортирован
+              <AddStartupForm
+                  onAdd={handleAddStartup}
+                  onCancel={() => setShowAddForm(false)}
+                  isLoading={loading}
+              />
+          )}
+
+          {/* ---> ДОБАВЛЕНО: Поле для поиска <--- */}
+          <div className="search-container">
+              <input
+                  type="text"
+                  placeholder="Поиск по названию стартапа..."
+                  className="search-input"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  disabled={loading}
+              />
+          </div>
+
+
+          {/* Список карточек стартапов */}
+          <div className="startup-list">
+              {/* Улучшенная логика отображения сообщений */}
+              {loading && startups.length === 0 && <p>Загрузка стартапов...</p>}
+              {!loading && startups.length === 0 && !fetchError && <p>Стартапов пока нет. Добавьте первый!</p>}
+              {!loading && startups.length > 0 && filteredStartups.length === 0 && (
+                  <p className="no-results-message">По вашему запросу "{searchQuery}" ничего не найдено.</p>
+              )}
+
+              {/* Рендерим отфильтрованные стартапы */}
+              {filteredStartups.map((startup) => (
+                  <StartupCard
+                      key={startup.id}
+                      startup={startup}
+                      isSelected={selectedStartupId === startup.id.toString()}
+                      onClick={() => !loading && handleSelectStartup(startup.id.toString())}
+                  />
+              ))}
+          </div>
+
+
+          {/* Форма инвестирования */}
+          <div className="investment-form">
+               <label htmlFor="amount">Сумма:</label>
+              <input
+                  id="amount" type='number' placeholder='0.00' value={amount}
+                  onChange={e => setAmount(e.target.value)} min="0"
+                  disabled={!selectedStartupId || loading}
+              />
+              <label htmlFor="currency">Валюта:</label>
+              <select id="currency" value={currency} onChange={e => setCurrency(e.target.value)} disabled={!selectedStartupId || loading}>
+                  <option value='ETH'>ETH</option>
+                  <option value='BTC'>BTC</option>
+                  <option value='USDT'>USDT</option>
+              </select>
+              <button onClick={handleInvest} disabled={!selectedStartupId || !amount || loading}>
+                  {loading ? 'Обработка...' : 'Инвестировать'}
+              </button>
+              {selectedStartupInfo && (
+                  <div className="selected-startup-info">
+                      Выбрано: <span>{selectedStartupInfo.name}</span>
+                  </div>
+              )}
+          </div>
+
+          {/* Сообщения для пользователя */}
+          {message && <p className={`message ${messageType}`}>{message}</p>}
+      </div>
   );
 }
 
-export default App;
 
+// --- Компонент верхнего уровня ---
+function App() {
+    const [token, setToken] = useState(localStorage.getItem('jwtToken'));
+    const [username, setUsername] = useState(localStorage.getItem('username'));
+
+    // Функция для сохранения токена и имени пользователя
+    const handleLoginSuccess = (newToken, loggedInUsername) => {
+        localStorage.setItem('jwtToken', newToken);
+        localStorage.setItem('username', loggedInUsername);
+        setToken(newToken);
+        setUsername(loggedInUsername);
+    };
+
+    // Функция для выхода
+    const handleLogout = useCallback(() => { // Используем useCallback для стабильности ссылки
+        localStorage.removeItem('jwtToken');
+        localStorage.removeItem('username');
+        setToken(null);
+        setUsername(null);
+    }, []); // Пустой массив зависимостей
+
+    // Проверка токена при загрузке (можно добавить запрос к /profile на бэкенде для валидации)
+    useEffect(() => {
+        const storedToken = localStorage.getItem('jwtToken');
+        const storedUsername = localStorage.getItem('username');
+        if (storedToken && storedUsername) {
+            // Тут можно добавить проверку токена на бэкенде, если нужно
+            // fetch('http://127.0.0.1:5000/profile', { headers: { Authorization: `Bearer ${storedToken}` }})
+            // .then(res => { if (!res.ok) handleLogout(); })
+            // .catch(handleLogout);
+            setToken(storedToken);
+            setUsername(storedUsername);
+        }
+    }, [handleLogout]); // Добавляем handleLogout в зависимости
+
+    return (
+        <div>
+            {token ? (
+                <AppContent token={token} username={username} onLogout={handleLogout} />
+            ) : (
+                <Auth onLoginSuccess={handleLoginSuccess} />
+            )}
+        </div>
+    );
+}
+
+export default App;
