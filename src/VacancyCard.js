@@ -1,23 +1,33 @@
-// src/VacancyCard.js
+// src/VacancyCard.js (ПОЛНЫЙ КОД с Resume Link)
 import React from 'react';
 
-function VacancyCard({ vacancy, currentUserId, isAdmin, onApply }) { // Добавили isAdmin
+function VacancyCard({ vacancy, currentUserId, isAdmin, onApply }) { // Пропсы без изменений
 
-    const hasApplied = vacancy.applicants?.some(app => app.user_id === currentUserId) // Проверяем по user_id в объектах
-                       || vacancy.applicant_count > 0 && !vacancy.applicants && vacancy.applicants !== null; // Считаем, что откликнулся, если видим только count > 0
+    const hasApplied = vacancy.applicants?.some(app => app.user_id === currentUserId)
+                       || (vacancy.applicant_count > 0 && !vacancy.applicants); // Проверка отклика
 
-    // Проверяем, может ли текущий пользователь видеть список откликов
-    const canViewApplicants = isAdmin || vacancy.startup_creator_id === currentUserId;
+    const canViewApplicants = isAdmin || vacancy.startup_creator_id === currentUserId; // Проверка прав на просмотр
 
     const handleApplyClick = () => {
-        // Запрашиваем ник в Telegram
+        // ---> Запрашиваем оба поля <---
         const telegramUsername = window.prompt("Пожалуйста, введите ваш Telegram username (например, @username):");
-        if (telegramUsername && telegramUsername.trim()) {
-            // Вызываем колбэк, передавая ID вакансии и ник
-            onApply(vacancy.id, telegramUsername.trim());
-        } else if (telegramUsername !== null) { // Если не нажал "Отмена", а ввел пустое
-             alert("Необходимо указать Telegram username для отклика.");
+        if (!telegramUsername || !telegramUsername.trim()) {
+             if (telegramUsername !== null) alert("Необходимо указать Telegram username.");
+             return; // Прерываем, если TG не введен или нажата отмена
         }
+
+        const resumeLink = window.prompt("Пожалуйста, введите ссылку на ваше резюме (например, hh.ru, LinkedIn, Google Drive):");
+        if (!resumeLink || !resumeLink.trim()) {
+            if (resumeLink !== null) alert("Необходимо указать ссылку на резюме.");
+            return; // Прерываем, если ссылка не введена или нажата отмена
+        }
+         // Простая проверка URL на клиенте
+        if (!resumeLink.trim().toLowerCase().startsWith('http://') && !resumeLink.trim().toLowerCase().startsWith('https://')) {
+             alert("Ссылка на резюме должна начинаться с http:// или https://");
+             return;
+        }
+        // ---> Вызываем колбэк с обоими значениями <---
+        onApply(vacancy.id, telegramUsername.trim(), resumeLink.trim());
     };
 
     return (
@@ -31,49 +41,45 @@ function VacancyCard({ vacancy, currentUserId, isAdmin, onApply }) { // Доба
                 <div className="vacancy-salary">{vacancy.salary || 'З/П не указана'}</div>
             </div>
 
-            <div className="vacancy-section">
-                <h4>Описание:</h4>
-                <p>{vacancy.description}</p>
-            </div>
+            <div className="vacancy-section"><h4>Описание:</h4><p>{vacancy.description}</p></div>
+            <div className="vacancy-section"><h4>Требования:</h4><p style={{ whiteSpace: 'pre-wrap' }}>{vacancy.requirements}</p></div>
 
-            <div className="vacancy-section">
-                <h4>Требования:</h4>
-                <p style={{ whiteSpace: 'pre-wrap' }}>{vacancy.requirements}</p>
-            </div>
-
-            {/* --- Отображение откликов с проверкой прав --- */}
+            {/* --- Отображение откликов с ссылкой на резюме --- */}
             <div className="vacancy-section vacancy-applicants">
                  <h4>
                     Откликнулись ({vacancy.applicant_count ?? 0})
                     {!canViewApplicants && vacancy.applicant_count > 0 && " (детали доступны создателю)"}
                  </h4>
                 {canViewApplicants && vacancy.applicants && vacancy.applicants.length > 0 ? (
-                    // Если есть права и есть список откликов
-                    <div className="applicant-list">
+                    <ul className="applicant-details-list"> {/* Используем список для структурирования */}
                         {vacancy.applicants.map((applicant, index) => (
-                            // Отображаем Telegram username
-                            <span key={applicant.user_id || index} className="applicant-tag">
-                                {applicant.telegram || 'TG не указан'}
-                            </span>
+                            <li key={applicant.user_id || index} className="applicant-detail-item">
+                                {/* Отображаем Telegram */}
+                                <span className="applicant-tg">{applicant.telegram || 'TG не указан'}</span>
+                                {/* Отображаем ссылку на резюме, если она есть */}
+                                {applicant.resume_link && (
+                                    <a
+                                        href={applicant.resume_link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="resume-link"
+                                        title={applicant.resume_link} // Показываем URL при наведении
+                                    >
+                                        Резюме
+                                    </a>
+                                )}
+                                {!applicant.resume_link && <span className='no-resume'>(Резюме не указано)</span>}
+                            </li>
                         ))}
-                    </div>
-                ) : (
-                    // Если нет прав или список пуст
-                    <p>
-                        {vacancy.applicant_count > 0 && !canViewApplicants
-                            ? "Список откликнувшихся виден только создателю вакансии." // Уточняем сообщение
-                            : "Пока никто не откликнулся."}
-                    </p>
-                )}
+                    </ul>
+                ) : ( <p> {/* Сообщение об отсутствии или недоступности */}
+                        {vacancy.applicant_count > 0 && !canViewApplicants ? "Список откликнувшихся виден только создателю вакансии." : "Пока никто не откликнулся."}
+                    </p> )}
             </div>
 
-
+            {/* Кнопка отклика */}
             <div className="vacancy-actions">
-                <button
-                    onClick={handleApplyClick} // Используем новый обработчик
-                    disabled={hasApplied}
-                    className={`apply-button ${hasApplied ? 'applied' : ''}`}
-                >
+                <button onClick={handleApplyClick} disabled={hasApplied} className={`apply-button ${hasApplied ? 'applied' : ''}`}>
                     {hasApplied ? 'Вы откликнулись' : 'Откликнуться'}
                 </button>
             </div>
