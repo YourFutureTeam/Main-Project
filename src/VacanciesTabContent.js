@@ -1,210 +1,181 @@
-// src/VacanciesTabContent.js (ПОЛНЫЙ КОД - с функциями модерации)
+// src/VacanciesTabContent.js (ПОЛНЫЙ КОД - с чекбоксом "Только мои вакансии")
 import React, { useState, useEffect, useCallback } from 'react';
 import VacancyCard from './VacancyCard';
 import AddVacancyForm from './AddVacancyForm';
 
-// Принимаем isAdmin как проп
 function VacanciesTabContent({ token, userId, isAdmin, userRole, authFetch, allStartups, showMessage, userProfileData }) {
-    const [vacancies, setVacancies] = useState([]); // Список вакансий для отображения
-    const [loading, setLoading] = useState(false); // Общий лоадер для вкладки
-    const [error, setError] = useState(''); // Ошибка загрузки
-    const [showAddVacancyForm, setShowAddVacancyForm] = useState(false); // Показ формы добавления
-    const [vacancySearchQuery, setVacancySearchQuery] = useState(''); // Строка поиска
-    const [currentUserProfile, setCurrentUserProfile] = useState(userProfileData || null); // Данные профиля
-    const [loadingProfile, setLoadingProfile] = useState(!userProfileData); // Лоадер профиля
+    const [vacancies, setVacancies] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    // ---> НОВОЕ СОСТОЯНИЕ: Фильтр "Только мои вакансии" <---
+    const [showOnlyMyVacancies, setShowOnlyMyVacancies] = useState(false);
+    // ------------------------------------------------------
+    const [showAddVacancyForm, setShowAddVacancyForm] = useState(false);
+    const [vacancySearchQuery, setVacancySearchQuery] = useState('');
+    const [currentUserProfile, setCurrentUserProfile] = useState(userProfileData || null);
+    const [loadingProfile, setLoadingProfile] = useState(!userProfileData);
 
-    // Фильтруем стартапы, где пользователь создатель (или если админ)
-    const userOwnedStartups = allStartups.filter(startup => isAdmin || startup.creator_user_id === userId);
-    // Может ли пользователь добавлять вакансии
-    const canAddVacancies = isAdmin || userOwnedStartups.length > 0;
+    // Фильтруем стартапы, К КОТОРЫМ МОЖНО создавать вакансии (только ОДОБРЕННЫЕ + свои/админ)
+    // Используем allStartups, который приходит из App.js
+    const creatableStartups = allStartups.filter(startup =>
+        startup.status === 'approved' && (isAdmin || startup.creator_user_id === userId)
+    );
+    // Может добавлять вакансии, если есть хоть один подходящий стартап
+    const canAddVacancies = creatableStartups.length > 0;
 
-    // Загрузка вакансий (фильтрация по статусу и роли происходит на бэкенде)
+    // Загрузка ВАКАНСИЙ (теперь учитывает фильтр 'showOnlyMyVacancies')
     const fetchVacancies = useCallback(() => {
-        console.log("[VacanciesTabContent] Загрузка вакансий...");
         setLoading(true); setError('');
-        authFetch('/vacancies') // Используем authFetch, т.к. видимость зависит от пользователя
-            .then(data => {
-                setVacancies(data); // Сохраняем полученный список
-                console.log("[VacanciesTabContent] Вакансии загружены:", data.length);
-            })
-            .catch(err => {
-                console.error("Ошибка загрузки вакансий:", err);
-                setError(`Не удалось загрузить вакансии: ${err.message}`);
-            })
-            .finally(() => setLoading(false)); // Выключаем лоадер
-    }, [authFetch]); // Зависимость только от authFetch
+        console.log(`[VacanciesTabContent] Загрузка вакансий... (Только мои: ${showOnlyMyVacancies})`);
+        // Добавляем параметр filter_by_creator=true если чекбокс включен
+        const url = `/vacancies${showOnlyMyVacancies ? '?filter_by_creator=true' : ''}`;
+        authFetch(url) // Используем authFetch и сформированный URL
+            .then(data => setVacancies(data))
+            .catch(err => { console.error("Ошибка вакансий:", err); setError(`Ошибка: ${err.message}`); })
+            .finally(() => setLoading(false));
+    }, [authFetch, showOnlyMyVacancies]); // <-- Добавили showOnlyMyVacancies в зависимости!
 
-    // Загрузка профиля текущего пользователя (если не передан)
+    // Загрузка профиля (без изменений)
     const fetchCurrentUserProfile = useCallback(() => {
-        if (!currentUserProfile) { // Только если профиль еще не загружен
-            console.log("[VacanciesTabContent] Загрузка профиля текущего пользователя...");
+        if (!currentUserProfile) {
             setLoadingProfile(true);
             authFetch('/profile')
-                .then(data => {
-                    setCurrentUserProfile(data); // Сохраняем данные профиля
-                    console.log("[VacanciesTabContent] Профиль текущего пользователя загружен.");
-                })
-                .catch(err => {
-                    console.error("Ошибка загрузки профиля для VacanciesTab:", err);
-                    showMessage(`Не удалось загрузить данные профиля: ${err.message}. Отклик может быть недоступен.`, 'error');
-                })
+                .then(setCurrentUserProfile)
+                .catch(err => { console.error("Ошибка профиля:", err); showMessage(`Ошибка профиля: ${err.message}.`, 'error'); })
                 .finally(() => setLoadingProfile(false));
         }
-    }, [authFetch, showMessage, currentUserProfile]); // Добавляем currentUserProfile в зависимости
+    }, [authFetch, showMessage, currentUserProfile]);
 
-    // Загружаем вакансии и профиль при монтировании
+    // Загружаем профиль при монтировании
     useEffect(() => {
-        fetchVacancies();
         fetchCurrentUserProfile();
-    }, [fetchVacancies, fetchCurrentUserProfile]); // Используем созданные useCallback функции
+    }, [fetchCurrentUserProfile]); // Зависимость только от функции загрузки профиля
 
-    // Добавление новой вакансии
+    // ---> НОВЫЙ useEffect: Перезагружаем вакансии при изменении фильтра <---
+    useEffect(() => {
+        fetchVacancies(); // Вызываем fetchVacancies при изменении showOnlyMyVacancies
+    }, [showOnlyMyVacancies, fetchVacancies]); // Зависимости: состояние фильтра и сама функция загрузки
+    // -------------------------------------------------------------------
+
+
+    // Добавление вакансии
     const handleAddVacancy = async (vacancyData) => {
-        setLoading(true); // Используем общий лоадер?
-        setError('');
+        setLoading(true); setError('');
         try {
-            // Отправляем запрос на создание вакансии
-            const data = await authFetch('/vacancies', {
-                method: 'POST',
-                body: JSON.stringify(vacancyData)
-            });
-            // Показываем сообщение от бэкенда
-            showMessage(data.message || 'Вакансия отправлена на рассмотрение!', 'success');
-            // Добавляем новую вакансию в начало списка локально
-            setVacancies(prev => [data.vacancy, ...prev]);
-            // fetchVacancies(); // Или можно перезагрузить весь список
-            setShowAddVacancyForm(false); // Скрываем форму
-        } catch (err) {
-            console.error("Ошибка добавления вакансии:", err);
-            showMessage(`Ошибка добавления вакансии: ${err.message}`, 'error');
-        } finally {
-            setLoading(false);
-        }
+            const data = await authFetch('/vacancies', { method: 'POST', body: JSON.stringify(vacancyData) });
+            showMessage(data.message || 'Вакансия на рассмотрении!', 'success');
+            fetchVacancies(); // Перезагружаем список вакансий после добавления
+            // setVacancies(prev => [data.vacancy, ...prev]); // Или добавляем локально
+            setShowAddVacancyForm(false);
+        } catch (err) { showMessage(`Ошибка добавления: ${err.message}`, 'error'); }
+        finally { setLoading(false); }
      };
 
-    // Отклик на вакансию (без изменений по сравнению с пред. версией)
+    // Отклик на вакансию
     const handleApply = async (vacancyId) => {
-        // Проверка профиля происходит в VacancyCard перед вызовом
-        console.log(`[VacanciesTabContent] Отклик на вакансию ${vacancyId} (данные из профиля)`);
-        setLoading(true); // Используем общий лоадер
+        setLoading(true); // Используем основной лоадер?
         try {
-            // Отправляем POST без тела запроса
             const data = await authFetch(`/vacancies/${vacancyId}/apply`, { method: 'POST' });
              showMessage(data.message || 'Отклик отправлен!', 'success');
-             // Локальное обновление для немедленного фидбека
+             // Обновляем локально для немедленного отклика
              setVacancies(prevVacancies => prevVacancies.map(v => {
                  if (v.id === vacancyId && currentUserProfile) {
-                     const newApplicant = { user_id: userId, telegram: currentUserProfile.telegram, resume_link: currentUserProfile.resume_link };
-                     const existingApplicants = v.applicants ? [...v.applicants] : [];
-                     if (!existingApplicants.some(app => app.user_id === userId)) { existingApplicants.push(newApplicant); }
-                     return { ...v, applicants: existingApplicants, applicant_count: existingApplicants.length };
-                 }
-                 return v;
+                     const newApp = { user_id: userId, telegram: currentUserProfile.telegram, resume_link: currentUserProfile.resume_link };
+                     const apps = v.applicants ? [...v.applicants] : [];
+                     if (!apps.some(a => a.user_id === userId)) { apps.push(newApp); }
+                     return { ...v, applicants: apps, applicant_count: apps.length, hasApplied: true }; // Можно добавить флаг hasApplied
+                 } return v;
              }));
-             // Запускаем рефетч для синхронизации
-             setTimeout(() => fetchVacancies(), 100);
+             // Можно добавить небольшой таймаут перед перезагрузкой, чтобы пользователь успел увидеть локальное изменение
+             // setTimeout(() => fetchVacancies(), 500);
         } catch (err) {
-             console.error(`[VacanciesTabContent] Ошибка отклика на ${vacancyId}:`, err);
-             if (err.message && err.message.includes('409')) { showMessage('Вы уже откликались.', 'info'); }
-             else if (err.message && (err.message.includes('Telegram') || err.message.includes('резюме'))) { showMessage(err.message, 'error'); }
+             console.error(`Ошибка отклика на ${vacancyId}:`, err);
+             if (err.message?.includes('409')) { showMessage('Вы уже откликались.', 'info'); }
+             else if (err.message?.includes('Telegram') || err.message?.includes('резюме')) { showMessage(err.message, 'error'); }
              else { showMessage(`Ошибка отклика: ${err.message}`, 'error'); }
-        } finally {
-             setLoading(false);
-        }
+        } finally { setLoading(false); } // Снимаем лоадер
     };
 
-    // Одобрение вакансии админом
+    // Одобрение вакансии
     const handleApprove = async (vacancyId) => {
-        console.log(`[VacanciesTabContent] Одобрение вакансии ${vacancyId}`);
-        setLoading(true); // Используем общий лоадер?
+        setLoading(true);
         try {
-            // Отправляем PUT запрос на одобрение
             const data = await authFetch(`/vacancies/${vacancyId}/approve`, { method: 'PUT' });
             showMessage(data.message || 'Вакансия одобрена!', 'success');
-            // Обновляем статус вакансии локально
-            setVacancies(prev => prev.map(v =>
-                v.id === vacancyId
-                ? { ...v, status: 'approved', rejection_reason: null }
-                : v
-            ));
-            // fetchVacancies(); // Можно перезагрузить список, если нужно
-        } catch (err) {
-            console.error(`Ошибка одобрения вакансии ${vacancyId}:`, err);
-            showMessage(`Ошибка одобрения: ${err.message}`, 'error');
-        } finally {
-            setLoading(false);
-        }
+            // Обновляем локально
+            setVacancies(prev => prev.map(v => v.id === vacancyId ? data.vacancy : v));
+            // fetchVacancies(); // Или перезагружаем
+        } catch (err) { showMessage(`Ошибка одобрения: ${err.message}`, 'error'); }
+        finally { setLoading(false); }
     };
 
-    // Отклонение вакансии админом
+    // Отклонение вакансии
     const handleReject = async (vacancyId, reason) => {
-        console.log(`[VacanciesTabContent] Отклонение вакансии ${vacancyId} по причине: ${reason}`);
-        setLoading(true); // Используем общий лоадер?
+        setLoading(true);
         try {
-            // Отправляем PUT запрос на отклонение с причиной
-            const data = await authFetch(`/vacancies/${vacancyId}/reject`, {
-                method: 'PUT',
-                body: JSON.stringify({ reason: reason })
-            });
+            const data = await authFetch(`/vacancies/${vacancyId}/reject`, { method: 'PUT', body: JSON.stringify({ reason: reason }) });
             showMessage(data.message || 'Вакансия отклонена!', 'success');
-            // Обновляем статус и причину локально
-            setVacancies(prev => prev.map(v =>
-                v.id === vacancyId
-                ? { ...v, status: 'rejected', rejection_reason: reason }
-                : v
-            ));
-            // fetchVacancies(); // Можно перезагрузить список
-        } catch (err) {
-            console.error(`Ошибка отклонения вакансии ${vacancyId}:`, err);
-            showMessage(`Ошибка отклонения: ${err.message}`, 'error');
-        } finally {
-            setLoading(false);
-        }
+            // Обновляем локально
+            setVacancies(prev => prev.map(v => v.id === vacancyId ? data.vacancy : v));
+            // fetchVacancies(); // Или перезагружаем
+        } catch (err) { showMessage(`Ошибка отклонения: ${err.message}`, 'error'); }
+        finally { setLoading(false); }
     };
 
-    // Фильтрация вакансий для поиска (по отфильтрованному на бэке списку)
+    // Фильтрация вакансий по ПОИСКОВОМУ ЗАПРОСУ (фильтр "только мои" применен при загрузке)
     const filteredVacancies = vacancies.filter(vacancy =>
         vacancy.title.toLowerCase().includes(vacancySearchQuery.toLowerCase())
     );
 
-    // Лог для проверки isAdmin перед рендером
-    console.log("[VacanciesTabContent] Rendering, isAdmin prop:", isAdmin);
+    console.log("[VacanciesTabContent] Rendering, isAdmin:", isAdmin, "Creatable startups:", creatableStartups.length);
 
-    // --- JSX Рендеринг ---
+    // --- JSX ---
     return (
         <div className="vacancies-content">
-            {/* Сообщение об ошибке загрузки */}
             {error && <p className="message error">{error}</p>}
-            {/* Поиск */}
-            <div className="search-container">
-                 <input type="text" placeholder="Поиск по названию вакансии..." className="search-input" value={vacancySearchQuery} onChange={(e) => setVacancySearchQuery(e.target.value)} disabled={loading || loadingProfile} />
+            {/* Контейнер для поиска и фильтра */}
+            <div className="search-and-filter-container">
+                <div className="search-container">
+                    <input type="text" placeholder="Поиск по названию..." className="search-input" value={vacancySearchQuery} onChange={(e) => setVacancySearchQuery(e.target.value)} disabled={loading || loadingProfile} />
+                </div>
+                {/* Чекбокс фильтра "Только мои" */}
+                <div className="filter-container">
+                    <input
+                        type="checkbox"
+                        id="showOnlyMyVacancies"
+                        checked={showOnlyMyVacancies}
+                        onChange={(e) => setShowOnlyMyVacancies(e.target.checked)}
+                        disabled={loading || loadingProfile}
+                    />
+                    <label htmlFor="showOnlyMyVacancies">Только мои вакансии</label>
+                </div>
             </div>
-            {/* Кнопка/Форма добавления вакансии */}
+
+            {/* Кнопка и форма добавления */}
+            {/* Показывать кнопку можно, если есть КУДА добавлять */}
             {canAddVacancies && !showAddVacancyForm && (<button onClick={() => setShowAddVacancyForm(true)} className="add-button" disabled={loading || loadingProfile}>+ Добавить вакансию</button> )}
-            {canAddVacancies && showAddVacancyForm && ( <AddVacancyForm userStartups={userOwnedStartups} onAdd={handleAddVacancy} onCancel={() => setShowAddVacancyForm(false)} isLoading={loading || loadingProfile} /> )}
+            {canAddVacancies && showAddVacancyForm && ( <AddVacancyForm userStartups={creatableStartups} onAdd={handleAddVacancy} onCancel={() => setShowAddVacancyForm(false)} isLoading={loading || loadingProfile} /> )}
+            {/* Сообщение, если нет стартапов для добавления вакансий */}
+            {!showAddVacancyForm && !canAddVacancies && !isAdmin && <p className="info-message">Чтобы добавить вакансию, у вас должен быть хотя бы один <span style={{fontWeight: 'bold'}}>одобренный</span> стартап, созданный вами.</p>}
+            {!showAddVacancyForm && !canAddVacancies && isAdmin && <p className="info-message">В системе нет одобренных стартапов, к которым можно добавить вакансии.</p>}
+
 
             {/* Список вакансий */}
             <div className="vacancy-list card-list">
-                 {/* Сообщения о загрузке / отсутствии вакансий */}
-                 {(loading || loadingProfile) && vacancies.length === 0 && <p>Загрузка вакансий...</p>}
-                 {!loading && !loadingProfile && vacancies.length === 0 && !error && <p>Нет доступных вакансий.</p>}
-                 {!loading && !loadingProfile && vacancies.length > 0 && filteredVacancies.length === 0 && ( <p className="no-results-message">По вашему запросу "{vacancySearchQuery}" ничего не найдено.</p> )}
-
-                 {/* Рендер карточек вакансий */}
+                 {(loading || loadingProfile) && vacancies.length === 0 && <p>Загрузка...</p>}
+                 {!loading && !loadingProfile && vacancies.length === 0 && !error && <p>Нет вакансий{showOnlyMyVacancies ? ', созданных вами' : ''}.</p>}
+                 {!loading && !loadingProfile && vacancies.length > 0 && filteredVacancies.length === 0 && ( <p className="no-results-message">Нет результатов по вашему запросу.</p> )}
+                 {/* Рендерим отфильтрованные по поиску вакансии */}
                  {filteredVacancies.map((vacancy) => (
                     <VacancyCard
-                        key={vacancy.id}
-                        vacancy={vacancy}
-                        currentUserId={userId}
-                        isAdmin={isAdmin} // Передаем флаг админа
-                        userProfile={currentUserProfile} // Передаем профиль текущего пользователя
-                        onApply={handleApply}        // Передаем функцию отклика
-                        onApprove={handleApprove}    // Передаем функцию одобрения
-                        onReject={handleReject}      // Передаем функцию отклонения
+                        key={vacancy.id} vacancy={vacancy} currentUserId={userId}
+                        isAdmin={isAdmin} userProfile={currentUserProfile}
+                        onApply={handleApply} onApprove={handleApprove} onReject={handleReject}
                     />
                  ))}
             </div>
         </div>
     );
 }
+
 export default VacanciesTabContent;

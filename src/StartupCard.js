@@ -73,20 +73,23 @@ function StartupCard({
               {renderStatusBadge()} {/* Рендерим статус */}
           </div>
           {/* Контейнер для информации о создателе */}
-          <div className="startup-creator-info">
-              <span className="card-creator">от {startup.creator_username || 'Система'}</span>
-              {/* Отображаем Telegram создателя, если есть */}
-              {startup.creator_telegram && (
-                  <a href={`https://t.me/${startup.creator_telegram.substring(1)}`} target="_blank" rel="noopener noreferrer" className='creator-contact creator-telegram' title={`Telegram: ${startup.creator_telegram}`}>
-                       {/* Иконка TG */} {startup.creator_telegram}
-                  </a>
-              )}
-              {/* Отображаем ссылку на резюме, если есть */}
-              {startup.creator_resume_link && (
-                  <a href={startup.creator_resume_link} target="_blank" rel="noopener noreferrer" className='creator-contact creator-resume' title="Резюме создателя">
-                       {/* Иконка CV */} Резюме
-                  </a>
-              )}
+          <div className="startup-creator-details"> {/* Новый общий контейнер */}
+                <span className="card-creator">от {startup.creator_username || 'Система'}</span>
+                {/* Контейнер ТОЛЬКО для ссылок контактов */}
+                {(startup.creator_telegram || startup.creator_resume_link) && ( // Показываем контейнер, только если есть хотя бы одна ссылка
+                    <div className="creator-contact-links">
+                        {startup.creator_telegram && (
+                            <a href={`https://t.me/${startup.creator_telegram.substring(1)}`} target="_blank" rel="noopener noreferrer" className='creator-contact creator-telegram' title={`Telegram: ${startup.creator_telegram}`}>
+                                {/* Иконка TG */} {startup.creator_telegram}
+                            </a>
+                        )}
+                        {startup.creator_resume_link && (
+                            <a href={startup.creator_resume_link} target="_blank" rel="noopener noreferrer" className='creator-contact creator-resume' title="Резюме создателя">
+                                {/* Иконка CV */} Резюме
+                            </a>
+                        )}
+                    </div>
+                )}
           </div>
       </div>
 

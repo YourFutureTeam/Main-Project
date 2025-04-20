@@ -1,4 +1,4 @@
-# main.py (ПОЛНЫЙ КОД - ОТФОРМАТИРОВАННАЯ ВЕРСИЯ + ПРОВЕРКА ПРОФИЛЯ ПРИ СОЗДАНИИ)
+# main.py (ПОЛНЫЙ КОД - ОТФОРМАТИРОВАННАЯ ВЕРСИЯ + ФИЛЬТР "ТОЛЬКО МОИ")
 
 import os
 import re
@@ -18,7 +18,7 @@ CORS(app)
 
 # 3. JWT Config
 app.config["JWT_SECRET_KEY"] = os.environ.get(
-    "JWT_SECRET_KEY", "a-very-strong-secret-key-for-dev-only-FINAL-FINAL-v11" # Обновляем версию ключа для примера
+    "JWT_SECRET_KEY", "a-very-strong-secret-key-for-dev-only-FINAL-FINAL-v12" # Обновляем версию
 )
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
@@ -61,17 +61,22 @@ startups = {
     1: {
         "id": 1, "name": "ТехноИнновации Альфа (Одобрено)", "description": "Разработка ИИ.",
         "funds_raised": {"ETH": 10.5}, "opensea_link": "https://...",
-        "status": "approved", "rejection_reason": None, "creator_user_id": 0
+        "status": "approved", "rejection_reason": None, "creator_user_id": 0 # Админ
     },
     2: {
         "id": 2, "name": "ЭкоСтарт (В ожидании)", "description": "Зеленые технологии.",
         "funds_raised": {"USDT": 500}, "opensea_link": "https://...",
-        "status": "pending", "rejection_reason": None, "creator_user_id": 1
+        "status": "pending", "rejection_reason": None, "creator_user_id": 1 # User 1
     },
     3: {
         "id": 3, "name": "ГеймДев 'Код и Меч' (Отклонено)", "description": "Создаем инди-игры.",
         "funds_raised": {"BTC": 1, "ETH": 5}, "opensea_link": "https://...",
-        "status": "rejected", "rejection_reason": "Недостаточное описание бизнес-модели", "creator_user_id": 1
+        "status": "rejected", "rejection_reason": "Недостаточное описание бизнес-модели", "creator_user_id": 1 # User 1
+    },
+     4: { # Добавим еще один одобренный стартап от другого юзера
+        "id": 4, "name": "Финтех Решения (Одобрено)", "description": "Платежные системы.",
+        "funds_raised": {"BTC": 0.5}, "opensea_link": "https://...",
+        "status": "approved", "rejection_reason": None, "creator_user_id": 2 # User 2 (добавим позже)
     }
 }
 meetups = {
@@ -80,12 +85,14 @@ meetups = {
     3: {"id": 3, "title": "Крипто (Отклонено)", "date": "...", "description": "...", "link": "...", "status": "rejected", "rejection_reason": "Не по теме", "creator_user_id": 1}
 }
 vacancies = {
-    1: {"id": 1, "startup_id": 1, "title": "Python Dev (Одобрена)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "approved", "rejection_reason": None, "creator_user_id": 0},
+    1: {"id": 1, "startup_id": 1, "title": "Python Dev (Одобрена)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "approved", "rejection_reason": None, "creator_user_id": 0}, # Вакансия админа к стартапу 1
+     2: {"id": 2, "startup_id": 4, "title": "Frontend Dev (Ожидает)", "description": "React...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 2}, # Вакансия User 2 к стартапу 4
+     3: {"id": 3, "startup_id": 1, "title": "ML Engineer (Ожидает)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 0}, # Еще вакансия админа
 }
-next_startup_id = 4
+next_startup_id = 5
 next_user_id = 1
 next_meetup_id = 4
-next_vacancy_id = 2
+next_vacancy_id = 4
 
 # 6. Create Admin User
 admin_username = "admin"
@@ -96,6 +103,10 @@ users[0] = {
     "full_name": "Администратор Сайта", "telegram": "@admin_tg_official", "resume_link": "http://example.com/admin"
 }
 print(f"--- Admin created: username='{admin_username}', password='{admin_password}' ---")
+# Добавим тестовых пользователей
+users[1] = {"username": "user1", "password_hash": generate_password_hash("user1"), "role": "user", "full_name": "Тест Юзер 1", "telegram": "@testuser1", "resume_link": "http://example.com/user1"}
+users[2] = {"username": "user2", "password_hash": generate_password_hash("user2"), "role": "user", "full_name": "Тест Юзер 2", "telegram": "@testuser2", "resume_link": None} # Без резюме
+next_user_id = 3
 
 
 # 7. Helper Functions
@@ -276,7 +287,7 @@ def update_profile():
 @app.route("/startups", methods=["GET"])
 @jwt_required(optional=True)
 def get_startups():
-    """Возвращает стартапы + контакты создателя."""
+    """Возвращает стартапы + контакты создателя (с фильтрами)."""
     current_user_id = None
     is_requesting_user_admin = False
     identity_str = get_jwt_identity()
@@ -288,17 +299,27 @@ def get_startups():
         except:
             current_user_id = None
 
+    filter_by_creator = request.args.get('filter_by_creator', 'false').lower() == 'true'
+    if filter_by_creator and current_user_id is None:
+        return jsonify(error="Требуется аутентификация для фильтра 'Только мои'"), 401
+
     startups_list_response = []
     for startup_data in startups.values():
         include_startup = False
-        if is_requesting_user_admin:
-            include_startup = True
+        is_creator = current_user_id is not None and startup_data.get("creator_user_id") == current_user_id
+
+        if filter_by_creator:
+            if is_creator:
+                 include_startup = True
         else:
-            if startup_data.get("status") == "approved":
+            if is_requesting_user_admin:
                 include_startup = True
-            elif current_user_id is not None and startup_data.get("creator_user_id") == current_user_id:
-                 if startup_data.get("status") in ["pending", "rejected"]:
+            else:
+                if startup_data.get("status") == "approved":
                     include_startup = True
+                elif is_creator:
+                    if startup_data.get("status") in ["pending", "rejected"]:
+                        include_startup = True
 
         if include_startup:
             creator_id = startup_data.get("creator_user_id")
@@ -330,14 +351,12 @@ def add_startup():
     except (ValueError, TypeError):
         return jsonify({"error": "Токен?"}), 422
 
-    # ---> ПРОВЕРКА ПРОФИЛЯ СОЗДАТЕЛЯ <---
     telegram_username = user_data.get("telegram")
     resume_link = user_data.get("resume_link")
     if not telegram_username or not telegram_username.strip():
-        return jsonify({"error": "Пожалуйста, укажите ваш Telegram username в Личном кабинете перед созданием стартапа."}), 400
+        return jsonify({"error": "Укажите Telegram в Личном кабинете."}), 400
     if not resume_link or not is_valid_url(resume_link):
-        return jsonify({"error": "Пожалуйста, укажите валидную ссылку на резюме в Личном кабинете перед созданием стартапа."}), 400
-    # ---> КОНЕЦ ПРОВЕРКИ ПРОФИЛЯ <---
+        return jsonify({"error": "Укажите ссылку на резюме в Личном кабинете."}), 400
 
     data = request.json
     name = data.get("name")
@@ -359,12 +378,11 @@ def add_startup():
     next_startup_id += 1
     print(f"Added PENDING startup: ID={new_id} by User={current_user_id}")
 
-    # Возвращаем данные с учетом уже проверенных контактов
     new_startup_data_response = {
         **startups[new_id],
-        "creator_username": user_data.get("username"), # Берем из user_data
-        "creator_telegram": telegram_username.strip(),      # Берем из user_data
-        "creator_resume_link": resume_link.strip()          # Берем из user_data
+        "creator_username": user_data.get("username"),
+        "creator_telegram": telegram_username.strip(),
+        "creator_resume_link": resume_link.strip()
     }
     return jsonify({"message": "Стартап на рассмотрении", "startup": new_startup_data_response}), 201
 
@@ -525,14 +543,12 @@ def add_meetup():
     except (ValueError, TypeError):
         return jsonify({"error": "Токен?"}), 422
 
-    # ---> ПРОВЕРКА ПРОФИЛЯ СОЗДАТЕЛЯ <---
     telegram_username = user_data.get("telegram")
     resume_link = user_data.get("resume_link")
     if not telegram_username or not telegram_username.strip():
-        return jsonify({"error": "Пожалуйста, укажите ваш Telegram username в Личном кабинете перед созданием митапа."}), 400
+        return jsonify({"error": "Укажите Telegram в Личном кабинете."}), 400
     if not resume_link or not is_valid_url(resume_link):
-        return jsonify({"error": "Пожалуйста, укажите валидную ссылку на резюме в Личном кабинете перед созданием митапа."}), 400
-    # ---> КОНЕЦ ПРОВЕРКИ ПРОФИЛЯ <---
+        return jsonify({"error": "Укажите ссылку на резюме в Личном кабинете."}), 400
 
     data = request.json
     title = data.get("title")
@@ -596,6 +612,7 @@ def reject_meetup(meetup_id):
 @app.route("/vacancies", methods=["GET"])
 @jwt_required(optional=True)
 def get_vacancies():
+    """Возвращает вакансии (с фильтрами)."""
     current_user_id = None
     is_requesting_user_admin = False
     identity_str = get_jwt_identity()
@@ -607,17 +624,27 @@ def get_vacancies():
         except:
             current_user_id = None
 
+    filter_by_creator = request.args.get('filter_by_creator', 'false').lower() == 'true'
+    if filter_by_creator and current_user_id is None:
+        return jsonify(error="Требуется аутентификация для фильтра 'Только мои'"), 401
+
     vacancies_list_response = []
     for vacancy_data in vacancies.values():
         include_vacancy = False
-        if is_requesting_user_admin:
-            include_vacancy = True
-        else:
-            if vacancy_data.get("status") == "approved":
+        is_creator = current_user_id is not None and vacancy_data.get("creator_user_id") == current_user_id
+
+        if filter_by_creator:
+            if is_creator:
                 include_vacancy = True
-            elif current_user_id is not None and vacancy_data.get("creator_user_id") == current_user_id:
-                 if vacancy_data.get("status") in ["pending", "rejected"]:
+        else:
+            if is_requesting_user_admin:
+                include_vacancy = True
+            else:
+                if vacancy_data.get("status") == "approved":
                     include_vacancy = True
+                elif is_creator:
+                     if vacancy_data.get("status") in ["pending", "rejected"]:
+                        include_vacancy = True
 
         if include_vacancy:
             startup_id = vacancy_data.get("startup_id")

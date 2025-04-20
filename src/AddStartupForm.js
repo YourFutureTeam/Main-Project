@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 // Импорт CSS
 import './App.css';
 
-// --- Компонент AddStartupForm ---// --- Компонент AddStartupForm ---
+// --- Компонент AddStartupForm ---
 function AddStartupForm({ onAdd, onCancel, isLoading }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -32,5 +32,6 @@ function AddStartupForm({ onAdd, onCancel, isLoading }) {
         </form>
     );
 }
+
 
 export default AddStartupForm;
