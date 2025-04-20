@@ -1052,5 +1052,129 @@ h1 {
 }
 
 /* ... (остальные стили) ... */
+/* src/App.css */
+
+/* ... (все предыдущие стили) ... */
+
+/* --- Стили для Модерации Вакансий (ОБНОВЛЕННЫЕ) --- */
+
+/* Контейнер для статуса и названия стартапа (без изменений) */
+.vacancy-status-container {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Базовый стиль для ЗНАЧКОВ СТАТУСА (текстовых) */
+.status-badge {
+  display: inline-block;
+  padding: 2px 0; /* Убираем боковые паддинги, вертикальные можно оставить */
+  font-size: 0.8em; /* Чуть увеличим для читаемости текста */
+  font-weight: 600; /* Сделаем пожирнее */
+  border-radius: 4px;
+  /* text-transform: uppercase; */ /* Убираем капс для лучшей читаемости */
+  line-height: 1.2;
+  white-space: nowrap;
+  /* Убираем фон */
+  background-color: transparent;
+}
+
+/* Статус: На рассмотрении */
+.status-pending {
+  color: #ff8c00; /* Оранжевый */
+}
+
+/* Статус: Отклонена */
+.status-rejected {
+  color: #dc3545; /* Красный */
+}
+
+/* Статус: Одобрена */
+.status-approved {
+  color: #28a745; /* Зеленый */
+}
+
+
+/* Стиль для отображения причины отклонения (можно оставить как есть или сделать менее ярким) */
+.rejection-reason {
+  background-color: #fff3cd; /* Светло-желтый фон вместо красного */
+  border: 1px solid #ffeeba; /* Желтая граница */
+  color: #856404; /* Темно-желтый текст */
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+
+/* Контейнер для кнопок админа (без изменений) */
+.admin-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* src/App.css */
+
+/* ... (все предыдущие стили) ... */
+
+/* --- Стили для Модерации Вакансий (ОБНОВЛЕННЫЕ) --- */
+
+/* Контейнер для статуса и названия стартапа (без изменений) */
+.vacancy-status-container {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+/* Базовый стиль для ЗНАЧКОВ СТАТУСА (текстовых) */
+.status-badge {
+  display: inline-block;
+  padding: 2px 0; /* Убираем боковые паддинги, вертикальные можно оставить */
+  font-size: 0.8em; /* Чуть увеличим для читаемости текста */
+  font-weight: 600; /* Сделаем пожирнее */
+  border-radius: 4px;
+  /* text-transform: uppercase; */ /* Убираем капс для лучшей читаемости */
+  line-height: 1.2;
+  white-space: nowrap;
+  /* Убираем фон */
+  background-color: transparent;
+}
+
+/* Статус: На рассмотрении */
+.status-pending {
+  color: #ff8c00; /* Оранжевый */
+}
+
+/* Статус: Отклонена */
+.status-rejected {
+  color: #dc3545; /* Красный */
+}
+
+/* Статус: Одобрена */
+.status-approved {
+  color: #28a745; /* Зеленый */
+}
+
+/* Стиль для отображения причины отклонения (можно оставить как есть или сделать менее ярким) */
+.rejection-reason {
+  background-color: #fff3cd; /* Светло-желтый фон вместо красного */
+  border: 1px solid #ffeeba; /* Желтая граница */
+  color: #856404; /* Темно-желтый текст */
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+
+/* Контейнер для кнопок админа (без изменений) */
+.admin-actions {
+  display: flex;
+  gap: 10px;
+}
+
+
+/* ... (остальные стили) ... */
+
 
 

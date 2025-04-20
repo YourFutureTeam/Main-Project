@@ -7,8 +7,7 @@ import { Auth } from './Auth';
 import MeetupsTabContent from './MeetupsTabContent';
 import VacanciesTabContent from './VacanciesTabContent';
 import ProfileTabContent from './ProfileTabContent';
-import AddStartupForm from './AddStartupForm'
-// Импорт CSS
+import AddStartupForm from './AddStartupForm'; // Определен ниже или импортирован
 import './App.css';
 
 
@@ -43,7 +42,6 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
     const showMessage = (text, type = 'info') => {
         setMessage(text);
         setMessageType(type);
-        // Убираем сообщение через 5 секунд
         setTimeout(() => {
             setMessage('');
             setMessageType('');
@@ -55,93 +53,78 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
         const headers = {
             'Content-Type': 'application/json',
             ...options.headers,
-            'Authorization': `Bearer ${token}` // Добавляем токен
+            'Authorization': `Bearer ${token}`
         };
-        console.log(`AuthFetch to ${url}: Method=${options.method || 'GET'}`); // Лог запроса
+        console.log(`AuthFetch to ${url}: Method=${options.method || 'GET'}`);
         try {
             const response = await fetch(`http://127.0.0.1:5000${url}`, { ...options, headers });
-            // Попытка получить JSON даже при ошибке
             const data = await response.json().catch(() => ({}));
-
             if (!response.ok) {
-                // Обработка ошибок авторизации
                 if (response.status === 401 || response.status === 422) {
-                    console.error(`AuthFetch Error ${response.status} to ${url}, logging out.`);
-                    onLogout(); // Выход из системы
-                    throw new Error(data.error || data.message || data.msg || "Сессия недействительна. Выполнен выход.");
+                    console.error(`Auth Error ${response.status}`);
+                    onLogout();
+                    throw new Error(data.error || "Сессия недействительна");
                 }
-                // Другие ошибки сервера
-                throw new Error(data.error || data.message || data.msg || `Ошибка сервера ${response.status}`);
+                throw new Error(data.error || `Ошибка ${response.status}`);
             }
-            return data; // Возврат данных успешного ответа
+            return data;
         } catch (error) {
-            console.error('AuthFetch failed:', error); // Логирование любой ошибки
-            // Переброс ошибки дальше
-            throw (error instanceof Error ? error : new Error(error || 'Неизвестная ошибка сети'));
+            console.error('AuthFetch failed:', error);
+            throw error;
         }
-    }, [token, onLogout]); // Зависимости: токен и функция выхода
+    }, [token, onLogout]);
 
     // Загрузка списка стартапов
     const fetchStartups = useCallback(() => {
-        setLoading(true); // Включаем общий лоадер
-        setFetchError(''); // Сбрасываем ошибку
-        fetch('http://127.0.0.1:5000/startups') // Публичный эндпоинт
+        setLoading(true); setFetchError('');
+        fetch('http://127.0.0.1:5000/startups')
             .then(response => {
-                if (!response.ok) {
-                    throw new Error(`Ошибка сети: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
                 return response.json();
             })
-            .then(data => {
-                setStartups(data); // Сохраняем полученные стартапы
-            })
+            .then(data => { setStartups(data); })
             .catch(error => {
                 console.error("Ошибка загрузки стартапов:", error);
                 setFetchError(`Не удалось загрузить стартапы: ${error.message}`);
             })
-            .finally(() => {
-                setLoading(false); // Выключаем общий лоадер
-            });
-    }, []); // Пустой массив зависимостей
+            .finally(() => { setLoading(false); });
+    }, []);
 
     // Загрузка профиля пользователя
     const fetchUserProfile = useCallback(() => {
         console.log("[AppContent] Загрузка/Обновление профиля пользователя...");
-        setLoadingProfile(true); // Включаем лоадер профиля
-        authFetch('/profile') // Используем authFetch
+        setLoadingProfile(true);
+        authFetch('/profile')
             .then(data => {
-                setUserProfileData(data); // Сохраняем данные профиля
+                setUserProfileData(data);
                 console.log("[AppContent] Профиль загружен/обновлен:", data);
             })
             .catch(err => {
                 console.error("Ошибка загрузки/обновления профиля в AppContent:", err);
-                // Показываем сообщение об ошибке, но не перезаписываем fetchError от стартапов
                 showMessage(`Не удалось загрузить/обновить данные профиля: ${err.message}`, 'error');
-                setUserProfileData(null); // Сбрасываем профиль при ошибке загрузки
+                setUserProfileData(null);
             })
-            .finally(() => {
-                setLoadingProfile(false); // Выключаем лоадер профиля
-            });
-    }, [authFetch, showMessage]); // Зависит от authFetch и showMessage
+            .finally(() => { setLoadingProfile(false); });
+    }, [authFetch, showMessage]);
 
     // Загружаем стартапы и профиль ТОЛЬКО ОДИН РАЗ при монтировании
     useEffect(() => {
         fetchStartups();
         fetchUserProfile();
-    }, []); // <-- ПУСТОЙ массив зависимостей!
+    }, []); // Пустой массив зависимостей
 
     // Обработчик добавления стартапа
     const handleAddStartup = async (startupData) => {
         console.log("handleAddStartup вызван с:", startupData);
-        setLoading(true); // Используем общий лоадер
+        setLoading(true);
         try {
             const data = await authFetch('/startups', {
                 method: 'POST',
                 body: JSON.stringify(startupData)
             });
             showMessage(data.message || 'Стартап успешно добавлен!', 'success');
-            fetchStartups(); // Обновляем список
-            setShowAddStartupForm(false); // Скрываем форму
+            fetchStartups();
+            setShowAddStartupForm(false);
         } catch (error) {
             showMessage(`Ошибка добавления стартапа: ${error.message}`, 'error');
         } finally {
@@ -152,16 +135,12 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
     // Обработчик клика на "Ред. средства"
     const handleEditFundsClick = (startup) => {
         console.log("Начало редактирования средств для:", startup.id);
-        setEditingStartupId(startup.id); // Запоминаем ID
+        setEditingStartupId(startup.id);
         const initialFunds = {};
         const currentFunds = startup.funds_raised || {};
-        for (const currency in currentFunds) {
-            initialFunds[currency] = String(currentFunds[currency]);
-        }
-        for (const cur of ['ETH', 'BTC', 'USDT']) {
-            if (!(cur in initialFunds)) { initialFunds[cur] = '0'; }
-        }
-        setEditingFunds(initialFunds); // Устанавливаем начальные значения для формы
+        for (const currency in currentFunds) { initialFunds[currency] = String(currentFunds[currency]); }
+        for (const cur of ['ETH', 'BTC', 'USDT']) { if (!(cur in initialFunds)) { initialFunds[cur] = '0'; } }
+        setEditingFunds(initialFunds);
     };
 
     // Обработчик изменения полей средств
@@ -172,48 +151,37 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
 
     // Обработчик сохранения средств
     const handleSaveFunds = async (startupId) => {
-        setUpdatingFunds(true); // Включаем лоадер операции
-        setMessage('');
-        const fundsToSend = {};
-        let validationError = null;
-        // Валидация и преобразование
+        setUpdatingFunds(true); setMessage('');
+        const fundsToSend = {}; let validationError = null;
         for (const currency in editingFunds) {
             const valueStr = editingFunds[currency].trim();
-            if (valueStr === '') { fundsToSend[currency] = 0; continue; } // Пустое поле = 0
+            if (valueStr === '') { fundsToSend[currency] = 0; continue; }
             try {
                 const amount = parseFloat(valueStr);
                 if (isNaN(amount) || amount < 0) { throw new Error(); }
                 fundsToSend[currency] = amount;
             } catch (e) { validationError = `Некорректное значение "${valueStr}" для ${currency}.`; break; }
         }
-        // Если ошибка валидации
         if (validationError) { showMessage(validationError, 'error'); setUpdatingFunds(false); return; }
 
         console.log(`[AppContent] Сохранение средств для ${startupId}:`, fundsToSend);
-        // Отправка запроса
         try {
             const data = await authFetch(`/startups/${startupId}/funds`, { method: 'PUT', body: JSON.stringify(fundsToSend) });
             showMessage(data.message || 'Средства обновлены!', 'success');
-            setEditingStartupId(null); // Выход из режима редактирования
-            // Оптимистичное обновление стартапа в локальном состоянии
+            setEditingStartupId(null);
             setStartups(prev => prev.map(s =>
                  s.id === startupId
                  ? { ...s, funds_raised: data.startup.funds_raised, creator_username: data.startup.creator_username }
                  : s
              ));
-        } catch (error) {
-            console.error("Ошибка сохранения средств:", error);
-            showMessage(`Ошибка обновления средств: ${error.message}`, 'error');
-        } finally {
-            setUpdatingFunds(false); // Выключаем лоадер операции
-        }
+        } catch (error) { console.error("Ошибка сохранения средств:", error); showMessage(`Ошибка: ${error.message}`, 'error'); }
+        finally { setUpdatingFunds(false); }
     };
 
     // Обработчик отмены редактирования средств
     const handleCancelEditFunds = () => {
         console.log("Отмена редактирования средств");
-        setEditingStartupId(null); // Сбрасываем ID
-        setEditingFunds({}); // Очищаем временные данные
+        setEditingStartupId(null); setEditingFunds({});
      };
 
     // Фильтрация стартапов для поиска
@@ -221,12 +189,15 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
         startup.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    // Лог для проверки isAdmin перед рендером
+    console.log("[AppContent] Rendering, isAdmin:", isAdmin, "userRole:", userRole);
+
     // --- JSX Рендеринг ---
     return (
         <div className="app-container">
             {/* Шапка */}
             <div className="app-header">
-                 <h1>Инвестируйте в Будущее!</h1>
+                 <h1>Your Future</h1>
                  <div className="user-info">
                     <span className="user-greeting">Привет, <span>{username}!</span> {isAdmin && '(Админ)'}</span>
                     <button onClick={onLogout} className="logout-button">Выйти</button>
@@ -283,7 +254,7 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
                 {activeTab === 'meetups' && (
                     <MeetupsTabContent
                         token={token}
-                        isAdmin={isAdmin}
+                        isAdmin={isAdmin} // Передаем isAdmin
                         authFetch={authFetch}
                     />
                  )}
@@ -294,9 +265,10 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
                         username={username}
                         userId={userId}
                         userRole={userRole}
+                        isAdmin={isAdmin} // Передаем isAdmin
                         authFetch={authFetch}
                         allStartups={startups}
-                        showMessage={showMessage} // Передаем showMessage
+                        showMessage={showMessage}
                         userProfileData={userProfileData} // Передаем загруженные данные профиля
                     />
                  )}
@@ -306,8 +278,8 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
                         token={token}
                         userId={userId}
                         authFetch={authFetch}
-                        showMessage={showMessage} // Передаем showMessage
-                        onProfileUpdate={fetchUserProfile} // Передаем колбэк для обновления профиля в AppContent
+                        showMessage={showMessage}
+                        onProfileUpdate={fetchUserProfile} // Передаем колбэк для обновления профиля
                     />
                  )}
             </div>

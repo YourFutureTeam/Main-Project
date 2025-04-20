@@ -4,8 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 // Импорт CSS
 import './App.css';
 
-// --- Компонент AddStartupForm (определен здесь, можно вынести) ---
-// --- Компонент AddStartupForm (определен здесь, можно вынести) ---
+// --- Компонент AddStartupForm ---
 function AddStartupForm({ onAdd, onCancel, isLoading }) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -26,10 +25,6 @@ function AddStartupForm({ onAdd, onCancel, isLoading }) {
             description: description.trim(),
             opensea_link: openseaLink.trim()
         });
-        // Опционально очистить поля после успешного добавления
-        // setName('');
-        // setDescription('');
-        // setOpenseaLink('');
     };
 
     return (
