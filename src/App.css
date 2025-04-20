@@ -1797,3 +1797,54 @@ strong {
 }
 
 /* --- КОНЕЦ СТИЛЕЙ ДЛЯ AUTH --- */
+/* src/App.css */
+
+/* ... (все твои предыдущие стили) ... */
+
+/* --- Стили для кнопок Модерации (Одобрить/Отклонить) --- */
+
+/* Общий стиль для кнопок в .admin-actions */
+.admin-actions button {
+  padding: 6px 14px; /* Комфортный размер */
+  font-size: 0.85em; /* Чуть меньше основного текста */
+  border-radius: 4px;
+  border: 1px solid transparent; /* Для консистентности */
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.1s ease;
+  text-align: center;
+  white-space: nowrap; /* Чтобы текст не переносился */
+}
+
+/* Кнопка Одобрить */
+.button-approve {
+  background-color: #28a745; /* Зеленый */
+  border-color: #28a745;
+  color: white;
+}
+
+.button-approve:hover:not(:disabled) {
+  background-color: #218838; /* Темнее зеленый */
+  border-color: #1e7e34;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Кнопка Отклонить */
+.button-reject {
+  background-color: #dc3545; /* Красный */
+  border-color: #dc3545;
+  color: white;
+}
+
+.button-reject:hover:not(:disabled) {
+  background-color: #c82333; /* Темнее красный */
+  border-color: #bd2130;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Стиль для заблокированных кнопок модерации */
+.admin-actions button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
