@@ -2029,3 +2029,41 @@ input:focus, textarea:focus, select:focus {
      box-shadow: 0 0 0 0.2rem rgba(160, 140, 200, 0.4);
      border-color: #b4a0d2; /* Можно и рамку сделать лавандовой */
 }
+
+.timeline-item {
+  display: flex;
+  justify-content: space-between; /* Оставляем */
+  align-items: center;
+  padding: 8px 5px;
+  border-bottom: 1px dashed #e0e0e0;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+  overflow: hidden; /* Добавим сюда для общей безопасности */
+}
+
+.timeline-label {
+  font-weight: 500;
+  flex-grow: 1; /* Занимает доступное место */
+  padding-right: 15px;
+  /* ДОБАВЛЯЕМ для надежности, если лейблы станут длинными */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0; /* Позволяет этому элементу сжиматься меньше контента */
+}
+
+.timeline-date {
+  flex-shrink: 0; /* Не сжиматься (уже было) */
+  text-align: right;
+  color: #555;
+  /* min-width: 150px; */ /* Можно убрать min-width, если он мешает */
+  max-width: 50%; /* Ограничим максимальную ширину (подбери значение) */
+
+  /* --- ВОТ ИСПРАВЛЕНИЕ --- */
+  white-space: nowrap;   /* 1. Запретить перенос */
+  overflow: hidden;      /* 2. Скрыть лишнее */
+  text-overflow: ellipsis; /* 3. Показать троеточие */
+  display: inline-block; /* Может помочь с применением text-overflow */
+  vertical-align: middle; /* Для выравнивания с текстом лейбла */
+  /* ------------------------ */
+}
