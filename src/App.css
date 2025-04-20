@@ -2072,3 +2072,144 @@ input:focus, textarea:focus, select:focus {
   vertical-align: middle; /* Для выравнивания с текстом лейбла */
   /* ------------------------ */
 }
+
+/* src/App.css */
+
+/* ... (все предыдущие стили) ... */
+
+/* --- Стили для кнопки Hold/Unhold --- */
+
+.button-toggle-hold {
+  padding: 5px 12px; /* Размер как у маленьких кнопок */
+  font-size: 0.85em;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.1s ease, transform 0.1s ease;
+  margin-left: 10px; /* Отступ от других кнопок */
+  vertical-align: middle; /* Выровнять с другими кнопками, если они в строку */
+}
+
+/* Стиль для кнопки "Приостановить" */
+.button-toggle-hold.hold {
+  background-color: #ffc107; /* Желтый/Оранжевый */
+  border-color: #ffc107;
+  color: #343a40; /* Темный текст для читаемости */
+}
+.button-toggle-hold.hold:hover:not(:disabled) {
+  background-color: #e0a800;
+  border-color: #d39e00;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Стиль для кнопки "Вернуть" */
+.button-toggle-hold.unhold {
+  background-color: #6c757d; /* Серый */
+  border-color: #6c757d;
+  color: white;
+}
+.button-toggle-hold.unhold:hover:not(:disabled) {
+  background-color: #5a6268;
+  border-color: #545b62;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.button-toggle-hold:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+.button-toggle-hold:active:not(:disabled) {
+   transform: scale(0.97);
+}
+
+/* --- Стиль для приостановленной карточки --- */
+
+.card.held {
+  opacity: 0.6; /* Пониженная прозрачность */
+  /* Добавим рамку для большей заметности */
+  border-left: 5px solid #ffc107;
+  transition: opacity 0.3s ease-out, border-left 0.3s ease-out;
+}
+
+.card.held:hover {
+  opacity: 0.85; /* Делаем чуть виднее при наведении */
+}
+
+/* Расположение кнопок в card-actions */
+.card-actions.startup-actions {
+    display: flex; /* Выравниваем кнопки в строку */
+    justify-content: space-between; /* Разносим группы кнопок */
+    align-items: center; /* Вертикально по центру */
+    padding-top: 10px;
+    margin-top: 10px;
+    border-top: 1px solid #f0f0f0; /* Легкий разделитель */
+}
+.admin-actions {
+    display: flex;
+    gap: 10px; /* Расстояние между кнопками одобрения/отклонения */
+}
+
+/* src/App.css */
+
+/* ... (все предыдущие стили) ... */
+
+/* --- Стили для приостановленных Вакансий --- */
+
+/* Применяем пониженную прозрачность */
+.card.vacancy-card.held {
+  opacity: 0.6;
+  border-left: 5px solid #6c757d; /* Серая рамка для вакансий */
+  transition: opacity 0.3s ease-out, border-left 0.3s ease-out;
+}
+
+.card.vacancy-card.held:hover {
+  opacity: 0.85;
+}
+
+/* Стиль для бейджа "Пауза" (если используется) */
+.status-badge.status-held {
+    background-color: #e2e6ea; /* Светло-серый фон */
+    color: #495057;      /* Темно-серый текст */
+    border: 1px solid #ced4da;
+    font-weight: normal;
+    padding: 2px 6px;
+}
+
+/* Стиль для кнопки Откликнуться */
+.button-apply {
+  padding: 6px 12px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s ease;
+}
+.button-apply:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+.button-apply:disabled {
+  background-color: #6c757d; /* Серый фон для заблокированной */
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Расположение элементов в карточке вакансии */
+.vacancy-card .card-header {
+    /* Можно добавить flex для выравнивания заголовка и названия стартапа */
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Выровнять по верху */
+}
+.vacancy-title-status {
+    flex-grow: 1; /* Занимает доступное место */
+    margin-right: 15px; /* Отступ от инфо о стартапе */
+}
+.vacancy-startup-info {
+    font-size: 0.85em;
+    color: #6c757d;
+    text-align: right;
+    flex-shrink: 0; /* Не сжиматься */
+}
