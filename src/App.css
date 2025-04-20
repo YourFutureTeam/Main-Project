@@ -2197,19 +2197,118 @@ input:focus, textarea:focus, select:focus {
 }
 
 /* Расположение элементов в карточке вакансии */
+/* src/App.css */
+
+/* Найди и ИЗМЕНИ/ДОБАВЬ стили */
+
+/* Родительский Flex-контейнер в шапке вакансии */
 .vacancy-card .card-header {
-    /* Можно добавить flex для выравнивания заголовка и названия стартапа */
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start; /* Выровнять по верху */
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* Выравнивание по верху */
+  gap: 15px; /* Добавим небольшой отступ между блоками */
 }
+
+/* Левый блок (Заголовок вакансии, статусы) */
 .vacancy-title-status {
-    flex-grow: 1; /* Занимает доступное место */
-    margin-right: 15px; /* Отступ от инфо о стартапе */
+  flex-grow: 1; /* Занимает доступное место */
+  /* Добавим min-width: 0, чтобы он мог сжиматься */
+  min-width: 0;
+  /* Можно ограничить ширину, если заголовки тоже длинные */
+  /* max-width: 70%; */
 }
+
+/* Правый блок (Информация о стартапе) */
 .vacancy-startup-info {
-    font-size: 0.85em;
-    color: #6c757d;
-    text-align: right;
-    flex-shrink: 0; /* Не сжиматься */
+  font-size: 0.85em;
+  color: #6c757d;
+  text-align: right;
+  flex-shrink: 0; /* Не сжиматься */
+  /* Ограничим максимальную ширину этого блока */
+  max-width: 40%; /* Например, 40% от ширины шапки */
+}
+
+/* Элемент с самим названием стартапа внутри .vacancy-startup-info */
+.vacancy-startup-info .startup-name {
+  display: block; /* Чтобы text-overflow сработал */
+  overflow: hidden;        /* Скрыть лишнее */
+  white-space: nowrap;     /* Запретить перенос */
+  text-overflow: ellipsis; /* Показать троеточие (...) */
+  font-weight: 500; /* Можно сделать название стартапа чуть жирнее */
+  color: #5a6268;   /* И чуть темнее */
+}
+
+/* Остальные стили для .vacancy-card и т.д. остаются */
+
+
+/* src/App.css */
+
+/* ... (все твои предыдущие стили) ... */
+
+/* --- Стили для Модального Окна Соглашения --- */
+
+.modal-overlay {
+  position: fixed; /* Фиксируем относительно viewport */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6); /* Полупрозрачный темный фон */
+  display: flex;
+  align-items: center; /* Центрируем по вертикали */
+  justify-content: center; /* Центрируем по горизонтали */
+  z-index: 1000; /* Поверх остального контента */
+  animation: fadeIn 0.3s ease-out forwards; /* Плавное появление оверлея */
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 30px 40px;
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(160, 140, 200, 0.4); /* Лавандовая тень */
+  width: 90%; /* Ширина окна */
+  max-width: 700px; /* Максимальная ширина */
+  max-height: 90vh; /* Максимальная высота */
+  display: flex;
+  flex-direction: column;
+  animation: fadeInUp 0.4s ease-out 0.1s backwards forwards; /* Появление контента окна */
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #4a4a4a; /* Цвет заголовка */
+}
+
+.agreement-modal .agreement-text {
+  flex-grow: 1; /* Занимает доступное место по высоте */
+  overflow-y: auto; /* Включаем вертикальный скролл, если текст не помещается */
+  border: 1px solid #eee; /* Легкая рамка вокруг текста */
+  padding: 15px 20px;
+  margin-bottom: 25px;
+  background-color: #fdfdfd; /* Чуть отличный фон для текста */
+  border-radius: 4px;
+}
+
+.agreement-modal .agreement-text pre {
+  white-space: pre-wrap; /* Позволяем переносить строки */
+  word-wrap: break-word; /* Перенос длинных слов */
+  font-family: inherit; /* Наследуем DM Sans */
+  font-size: 0.9em; /* Чуть меньше шрифт договора */
+  line-height: 1.6; /* Межстрочный интервал */
+  color: #555; /* Цвет текста договора */
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end; /* Кнопки справа */
+  gap: 15px; /* Расстояние между кнопками */
+  padding-top: 20px;
+  border-top: 1px solid #eee; /* Разделитель перед кнопками */
+}
+
+/* Стили для кнопок в модальном окне (используем классы .btn) */
+.modal-actions .btn {
+  padding: 10px 20px; /* Размер кнопок */
 }
