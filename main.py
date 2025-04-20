@@ -1,4 +1,4 @@
-# main.py (ПОЛНЫЙ КОД - ОТФОРМАТИРОВАННАЯ ВЕРСИЯ + ФИЛЬТР "ТОЛЬКО МОИ")
+# main.py (ПОЛНЫЙ КОД - Этапы стартапа + НАКОНЕЦ-ТО ОТФОРМАТИРОВАНО)
 
 import os
 import re
@@ -18,11 +18,10 @@ CORS(app)
 
 # 3. JWT Config
 app.config["JWT_SECRET_KEY"] = os.environ.get(
-    "JWT_SECRET_KEY", "a-very-strong-secret-key-for-dev-only-FINAL-FINAL-v12" # Обновляем версию
+    "JWT_SECRET_KEY", "a-very-strong-secret-key-for-dev-only-FINAL-FINAL-v13" # Версия
 )
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
-
 
 # 4. JWT Error Handlers
 @jwt.expired_token_loader
@@ -30,53 +29,67 @@ def expired_token_callback(jwt_header, jwt_payload):
     print("JWT Error: Expired token")
     return jsonify(error="Токен доступа истек"), 401
 
-
 @jwt.invalid_token_loader
 def invalid_token_callback(error_string):
     print(f"JWT Error: Invalid token - {error_string}")
     return jsonify(error=f"Недействительный токен: {error_string}"), 422
-
 
 @jwt.unauthorized_loader
 def missing_token_callback(error_string):
     print(f"JWT Error: Missing token - {error_string}")
     return jsonify(error=f"Отсутствует заголовок авторизации или токен: {error_string}"), 401
 
-
 @jwt.needs_fresh_token_loader
 def token_not_fresh_callback(jwt_header, jwt_payload):
     print("JWT Error: Fresh token required")
     return jsonify(error="Требуется свежий токен доступа"), 401
-
 
 @jwt.revoked_token_loader
 def revoked_token_callback(jwt_header, jwt_payload):
     print("JWT Error: Revoked token")
     return jsonify(error="Токен был отозван"), 401
 
+# 5. Определяем этапы на бэкенде (для валидации)
+# Должны совпадать с ключами в constants.js
+ALLOWED_STAGES = ['idea', 'mvp', 'pmf', 'scaling', 'established']
 
-# 5. Data Stores (In-Memory)
+# Получаем порядок этапа
+def get_stage_order(stage_key):
+    try:
+        return ALLOWED_STAGES.index(stage_key)
+    except ValueError:
+        return -1 # Недопустимый этап
+
+# 6. Data Stores (In-Memory) - Обновлена структура
 users = {}
 startups = {
     1: {
         "id": 1, "name": "ТехноИнновации Альфа (Одобрено)", "description": "Разработка ИИ.",
         "funds_raised": {"ETH": 10.5}, "opensea_link": "https://...",
-        "status": "approved", "rejection_reason": None, "creator_user_id": 0 # Админ
+        "status": "approved", "rejection_reason": None, "creator_user_id": 0,
+        "current_stage": "pmf", # <--- ДОБАВЛЕНО
+        "stage_timeline": {"scaling": "2025-12-31", "established": None} # <--- ДОБАВЛЕНО
     },
     2: {
         "id": 2, "name": "ЭкоСтарт (В ожидании)", "description": "Зеленые технологии.",
         "funds_raised": {"USDT": 500}, "opensea_link": "https://...",
-        "status": "pending", "rejection_reason": None, "creator_user_id": 1 # User 1
+        "status": "pending", "rejection_reason": None, "creator_user_id": 1,
+        "current_stage": "idea", # <--- ДОБАВЛЕНО
+        "stage_timeline": {"mvp": "2025-08-01", "pmf": None, "scaling": None, "established": None} # <--- ДОБАВЛЕНО
     },
     3: {
         "id": 3, "name": "ГеймДев 'Код и Меч' (Отклонено)", "description": "Создаем инди-игры.",
         "funds_raised": {"BTC": 1, "ETH": 5}, "opensea_link": "https://...",
-        "status": "rejected", "rejection_reason": "Недостаточное описание бизнес-модели", "creator_user_id": 1 # User 1
+        "status": "rejected", "rejection_reason": "Недостаточное описание", "creator_user_id": 1,
+        "current_stage": "mvp", # <--- ДОБАВЛЕНО
+        "stage_timeline": {"pmf": None, "scaling": None, "established": None} # <--- ДОБАВЛЕНО
     },
-     4: { # Добавим еще один одобренный стартап от другого юзера
+    4: {
         "id": 4, "name": "Финтех Решения (Одобрено)", "description": "Платежные системы.",
         "funds_raised": {"BTC": 0.5}, "opensea_link": "https://...",
-        "status": "approved", "rejection_reason": None, "creator_user_id": 2 # User 2 (добавим позже)
+        "status": "approved", "rejection_reason": None, "creator_user_id": 2,
+        "current_stage": "scaling", # <--- ДОБАВЛЕНО
+        "stage_timeline": {"established": "2026-06-30"} # <--- ДОБАВЛЕНО
     }
 }
 meetups = {
@@ -85,16 +98,16 @@ meetups = {
     3: {"id": 3, "title": "Крипто (Отклонено)", "date": "...", "description": "...", "link": "...", "status": "rejected", "rejection_reason": "Не по теме", "creator_user_id": 1}
 }
 vacancies = {
-    1: {"id": 1, "startup_id": 1, "title": "Python Dev (Одобрена)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "approved", "rejection_reason": None, "creator_user_id": 0}, # Вакансия админа к стартапу 1
-     2: {"id": 2, "startup_id": 4, "title": "Frontend Dev (Ожидает)", "description": "React...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 2}, # Вакансия User 2 к стартапу 4
-     3: {"id": 3, "startup_id": 1, "title": "ML Engineer (Ожидает)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 0}, # Еще вакансия админа
+    1: {"id": 1, "startup_id": 1, "title": "Python Dev (Одобрена)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "approved", "rejection_reason": None, "creator_user_id": 0},
+    2: {"id": 2, "startup_id": 4, "title": "Frontend Dev (Ожидает)", "description": "React...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 2},
+    3: {"id": 3, "startup_id": 1, "title": "ML Engineer (Ожидает)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 0},
 }
 next_startup_id = 5
-next_user_id = 1
+next_user_id = 1 # Будет перезаписан ниже
 next_meetup_id = 4
 next_vacancy_id = 4
 
-# 6. Create Admin User
+# 7. Create Admin User & Test Users
 admin_username = "admin"
 admin_password = "verysecretadminpassword"
 admin_pass_hash = generate_password_hash(admin_password)
@@ -103,27 +116,23 @@ users[0] = {
     "full_name": "Администратор Сайта", "telegram": "@admin_tg_official", "resume_link": "http://example.com/admin"
 }
 print(f"--- Admin created: username='{admin_username}', password='{admin_password}' ---")
-# Добавим тестовых пользователей
 users[1] = {"username": "user1", "password_hash": generate_password_hash("user1"), "role": "user", "full_name": "Тест Юзер 1", "telegram": "@testuser1", "resume_link": "http://example.com/user1"}
-users[2] = {"username": "user2", "password_hash": generate_password_hash("user2"), "role": "user", "full_name": "Тест Юзер 2", "telegram": "@testuser2", "resume_link": None} # Без резюме
+users[2] = {"username": "user2", "password_hash": generate_password_hash("user2"), "role": "user", "full_name": "Тест Юзер 2", "telegram": "@testuser2", "resume_link": None}
 next_user_id = 3
 
-
-# 7. Helper Functions
+# 8. Helper Functions
 def get_user_data_by_id(user_id_int):
     """Возвращает данные пользователя по ID (int) или None."""
     return users.get(user_id_int)
-
 
 def get_username_by_id(user_id):
     """Возвращает имя пользователя по ID (int или str) или стандартное имя."""
     try:
         user_id_int = int(user_id)
+        user_data = get_user_data_by_id(user_id_int)
+        return user_data.get("username", "N/A") if user_data else "N/A"
     except (ValueError, TypeError, AttributeError):
-        return "Неизвестный ID"
-    user_data = get_user_data_by_id(user_id_int)
-    return user_data.get("username", "Неизвестный") if user_data else "Неизвестный"
-
+        return "N/A"
 
 def is_valid_url(url):
     """Простая проверка URL на соответствие формату http(s)://..."""
@@ -132,8 +141,19 @@ def is_valid_url(url):
     pattern = re.compile(r'https?://[^\s/$.?#].[^\s]*', re.IGNORECASE)
     return bool(pattern.match(url.strip()))
 
+def is_valid_iso_date(date_string):
+    """Проверяет формат YYYY-MM-DD или None."""
+    if date_string is None:
+        return True
+    if not isinstance(date_string, str):
+        return False
+    try:
+        datetime.strptime(date_string, '%Y-%m-%d')
+        return True
+    except ValueError:
+        return False
 
-# 8. Admin Required Decorator
+# 9. Admin Required Decorator
 def admin_required():
     """Декоратор для проверки, является ли пользователь администратором."""
     def wrapper(fn):
@@ -146,20 +166,17 @@ def admin_required():
                 if user_data and user_data.get('role') == 'admin':
                     return fn(*args, **kwargs)
                 else:
-                    print(f"Admin access denied for user ID {user_id} (role: {user_data.get('role') if user_data else 'not found'})")
-                    return jsonify(error="Требуется доступ администратора"), 403
+                    return jsonify(error="Админ?"), 403
             except (ValueError, TypeError):
-                 print(f"Admin access denied due to invalid identity: {identity_str}")
-                 return jsonify(error="Недействительный идентификатор пользователя в токене"), 422
+                return jsonify(error="Токен?"), 422
         decorator.__name__ = fn.__name__
         decorator.__doc__ = fn.__doc__
         return decorator
     return wrapper
 
-
 # --- API Endpoints ---
 
-# 9. Auth Endpoints
+# 10. Auth Endpoints
 @app.route("/register", methods=["POST"])
 def register():
     """Регистрация нового пользователя."""
@@ -169,15 +186,13 @@ def register():
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"error": "Требуются имя пользователя и пароль"}), 400
+        return jsonify({"error": "Нет данных"}), 400
     if len(password) < 4:
-        return jsonify({"error": "Пароль должен быть не менее 4 символов"}), 400
+        return jsonify({"error": "Пароль < 4"}), 400
     if username == admin_username:
-        return jsonify({"error": "Имя пользователя 'admin' зарезервировано"}), 409
-
-    existing_user_id = next((uid for uid, udata in users.items() if udata.get("username") == username), None)
-    if existing_user_id is not None:
-        return jsonify({"error": "Имя пользователя уже занято"}), 409
+        return jsonify({"error": "'admin'?"}), 409
+    if next((uid for uid, udata in users.items() if udata.get("username") == username), None) is not None:
+        return jsonify({"error": "Имя занято"}), 409
 
     password_hash = generate_password_hash(password)
     user_id = next_user_id
@@ -186,9 +201,8 @@ def register():
         "full_name": username, "telegram": None, "resume_link": None
     }
     next_user_id += 1
-    print(f"Registered: ID={user_id}, User={username}")
-    return jsonify({"message": "Регистрация успешна"}), 201
-
+    print(f"Registered: {user_id}")
+    return jsonify({"message": "ОК"}), 201
 
 @app.route("/login", methods=["POST"])
 def login():
@@ -198,23 +212,23 @@ def login():
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"error": "Требуются имя пользователя и пароль"}), 400
+        return jsonify({"error": "Нет данных"}), 400
 
     user_id = next((uid for uid, udata in users.items() if udata.get("username") == username), None)
     user_data = get_user_data_by_id(user_id)
 
-    if (user_id is not None and user_data and check_password_hash(user_data.get("password_hash", ""), password)):
+    if (user_id is not None and user_data and
+            check_password_hash(user_data.get("password_hash", ""), password)):
         identity_str = str(user_id)
         access_token = create_access_token(identity=identity_str)
         user_role = user_data.get("role", "user")
         print(f"Login OK: ID={user_id}, Role={user_role}")
         return jsonify(access_token=access_token, username=username, role=user_role)
     else:
-        print(f"Login failed: User={username}")
-        return jsonify({"error": "Неверные учетные данные"}), 401
+        print(f"Login fail: {username}")
+        return jsonify({"error": "Неверно"}), 401
 
-
-# 10. Profile Endpoints
+# 11. Profile Endpoints
 @app.route("/profile", methods=["GET"])
 @jwt_required()
 def get_profile():
@@ -224,17 +238,18 @@ def get_profile():
         current_user_id = int(identity_str)
         user_data = get_user_data_by_id(current_user_id)
         if not user_data:
-            return jsonify({"error": "Пользователь не найден"}), 404
-
+            return jsonify({"error": "User?"}), 404
         profile_data = {
-            "id": current_user_id, "username": user_data.get("username"),
-            "role": user_data.get("role"), "full_name": user_data.get("full_name"),
-            "telegram": user_data.get("telegram"), "resume_link": user_data.get("resume_link")
+            "id": current_user_id,
+            "username": user_data.get("username"),
+            "role": user_data.get("role"),
+            "full_name": user_data.get("full_name"),
+            "telegram": user_data.get("telegram"),
+            "resume_link": user_data.get("resume_link")
         }
         return jsonify(profile_data)
     except (ValueError, TypeError):
-        return jsonify({"error": "Недействительный токен"}), 422
-
+        return jsonify({"error": "Токен?"}), 422
 
 @app.route("/profile", methods=["PUT"])
 @jwt_required()
@@ -245,9 +260,9 @@ def update_profile():
         current_user_id = int(identity_str)
         user_data = get_user_data_by_id(current_user_id)
         if not user_data:
-            return jsonify({"error": "Пользователь не найден"}), 404
+            return jsonify({"error": "User?"}), 404
     except (ValueError, TypeError):
-        return jsonify({"error": "Недействительный токен"}), 422
+        return jsonify({"error": "Токен?"}), 422
 
     data = request.json
     full_name = data.get("full_name")
@@ -267,27 +282,29 @@ def update_profile():
     if resume_link is not None:
         resume_value = resume_link.strip() if isinstance(resume_link, str) else None
         if resume_value and not is_valid_url(resume_value):
-            return jsonify({"error": "Неверный формат ссылки на резюме"}), 400
+            return jsonify({"error": "Ссылка?"}), 400
         user_data["resume_link"] = resume_value if resume_value else None
         updated = True
 
     if not updated:
-        return jsonify({"message": "Нет данных для обновления"}), 200
+        return jsonify({"message": "Нет данных"}), 200
 
-    print(f"Profile updated for User ID: {current_user_id}")
+    print(f"Profile updated: {current_user_id}")
     updated_profile_data = {
-        "id": current_user_id, "username": user_data.get("username"),
-        "role": user_data.get("role"), "full_name": user_data.get("full_name"),
-        "telegram": user_data.get("telegram"), "resume_link": user_data.get("resume_link")
+        "id": current_user_id,
+        "username": user_data.get("username"),
+        "role": user_data.get("role"),
+        "full_name": user_data.get("full_name"),
+        "telegram": user_data.get("telegram"),
+        "resume_link": user_data.get("resume_link")
     }
     return jsonify({"message": "Профиль обновлен", "profile": updated_profile_data})
 
-
-# 11. Startups Endpoints
+# 12. Startups Endpoints
 @app.route("/startups", methods=["GET"])
 @jwt_required(optional=True)
 def get_startups():
-    """Возвращает стартапы + контакты создателя (с фильтрами)."""
+    """Возвращает стартапы + контакты + этапы (с фильтрами)."""
     current_user_id = None
     is_requesting_user_admin = False
     identity_str = get_jwt_identity()
@@ -296,21 +313,21 @@ def get_startups():
             current_user_id = int(identity_str)
             user_data = get_user_data_by_id(current_user_id)
             is_requesting_user_admin = user_data and user_data.get("role") == "admin"
-        except:
-            current_user_id = None
+        except (ValueError, TypeError):
+            current_user_id = None # Обработка невалидного ID
 
     filter_by_creator = request.args.get('filter_by_creator', 'false').lower() == 'true'
     if filter_by_creator and current_user_id is None:
-        return jsonify(error="Требуется аутентификация для фильтра 'Только мои'"), 401
+        return jsonify(error="Auth required"), 401
 
     startups_list_response = []
-    for startup_data in startups.values():
+    for startup_id, startup_data in startups.items(): # Используем items() для надежности
         include_startup = False
         is_creator = current_user_id is not None and startup_data.get("creator_user_id") == current_user_id
 
         if filter_by_creator:
             if is_creator:
-                 include_startup = True
+                include_startup = True
         else:
             if is_requesting_user_admin:
                 include_startup = True
@@ -324,23 +341,28 @@ def get_startups():
         if include_startup:
             creator_id = startup_data.get("creator_user_id")
             creator_username = get_username_by_id(creator_id)
-            creator_profile = get_user_data_by_id(creator_id) if creator_id is not None else None
+            creator_profile = get_user_data_by_id(creator_id)
             creator_telegram = creator_profile.get("telegram") if creator_profile else None
             creator_resume_link = creator_profile.get("resume_link") if creator_profile else None
+            current_stage = startup_data.get("current_stage")
+            stage_timeline = startup_data.get("stage_timeline", {})
 
             startups_list_response.append({
-                **startup_data, "creator_username": creator_username,
-                "creator_telegram": creator_telegram, "creator_resume_link": creator_resume_link
+                **startup_data, # Важно, чтобы все поля из data store были включены
+                "creator_username": creator_username,
+                "creator_telegram": creator_telegram,
+                "creator_resume_link": creator_resume_link,
+                "current_stage": current_stage,
+                "stage_timeline": stage_timeline
             })
 
     sorted_startups = sorted(startups_list_response, key=lambda s: s.get("id", 0), reverse=True)
     return jsonify(sorted_startups)
 
-
 @app.route("/startups", methods=["POST"])
 @jwt_required()
 def add_startup():
-    """Добавление стартапа со статусом 'pending' (с проверкой профиля)."""
+    """Добавление стартапа со статусом 'pending' + текущий этап."""
     global next_startup_id
     identity_str = get_jwt_identity()
     try:
@@ -354,29 +376,37 @@ def add_startup():
     telegram_username = user_data.get("telegram")
     resume_link = user_data.get("resume_link")
     if not telegram_username or not telegram_username.strip():
-        return jsonify({"error": "Укажите Telegram в Личном кабинете."}), 400
+        return jsonify({"error": "Укажите TG"}), 400
     if not resume_link or not is_valid_url(resume_link):
-        return jsonify({"error": "Укажите ссылку на резюме в Личном кабинете."}), 400
+        return jsonify({"error": "Укажите резюме"}), 400
 
     data = request.json
     name = data.get("name")
     description = data.get("description")
     opensea_link = data.get("opensea_link")
+    current_stage = data.get("current_stage")
 
     if not name or not description:
         return jsonify({'error': 'Имя и описание'}), 400
     if not opensea_link or not is_valid_url(opensea_link):
         return jsonify({'error': 'Ссылка OpenSea'}), 400
+    if not current_stage or current_stage not in ALLOWED_STAGES:
+        return jsonify({'error': f'Недопустимый этап: {current_stage}.'}), 400
+
+    current_stage_order = get_stage_order(current_stage)
+    initial_timeline = {stage: None for i, stage in enumerate(ALLOWED_STAGES) if i > current_stage_order}
 
     new_id = next_startup_id
     startups[new_id] = {
         "id": new_id, "name": name.strip(), "description": description.strip(),
         "funds_raised": {"ETH": 0, "BTC": 0, "USDT": 0},
         "opensea_link": opensea_link.strip(), "status": "pending",
-        "rejection_reason": None, "creator_user_id": current_user_id
+        "rejection_reason": None, "creator_user_id": current_user_id,
+        "current_stage": current_stage,
+        "stage_timeline": initial_timeline
     }
     next_startup_id += 1
-    print(f"Added PENDING startup: ID={new_id} by User={current_user_id}")
+    print(f"Added PENDING startup: ID={new_id} by User={current_user_id}, Stage={current_stage}")
 
     new_startup_data_response = {
         **startups[new_id],
@@ -385,7 +415,6 @@ def add_startup():
         "creator_resume_link": resume_link.strip()
     }
     return jsonify({"message": "Стартап на рассмотрении", "startup": new_startup_data_response}), 201
-
 
 @app.route('/startups/<int:startup_id>/funds', methods=['PUT'])
 @jwt_required()
@@ -396,7 +425,7 @@ def update_startup_funds(startup_id):
         user_data = get_user_data_by_id(current_user_id)
         if not user_data:
             return jsonify({"error": "User?"}), 404
-    except:
+    except (ValueError, TypeError):
         return jsonify({"error": "Токен?"}), 422
 
     target_startup = startups.get(startup_id)
@@ -423,23 +452,25 @@ def update_startup_funds(startup_id):
             if amount_float < 0:
                 raise ValueError
             validated_funds[upper_currency] = amount_float
-        except:
+        except (ValueError, TypeError):
             return jsonify({"error": f"Сумма?"}), 400
 
     target_startup["funds_raised"] = validated_funds
-    print(f"Updated funds for startup {startup_id}")
+    print(f"Funds updated: {startup_id}")
 
+    # Возвращаем полный объект стартапа
     creator_id = target_startup.get("creator_user_id")
     creator_username = get_username_by_id(creator_id)
     creator_profile = get_user_data_by_id(creator_id)
     creator_telegram = creator_profile.get("telegram") if creator_profile else None
     creator_resume_link = creator_profile.get("resume_link") if creator_profile else None
     updated_startup_response = {
-        **target_startup, "creator_username": creator_username,
-        "creator_telegram": creator_telegram, "creator_resume_link": creator_resume_link
+        **target_startup, # Включая обновленные funds_raised и stage info
+        "creator_username": creator_username,
+        "creator_telegram": creator_telegram,
+        "creator_resume_link": creator_resume_link
     }
     return jsonify({"message": "Средства обновлены", "startup": updated_startup_response})
-
 
 @app.route("/startups/<int:startup_id>/approve", methods=["PUT"])
 @admin_required()
@@ -452,19 +483,21 @@ def approve_startup(startup_id):
 
     target_startup["status"] = "approved"
     target_startup["rejection_reason"] = None
-    print(f"Startup {startup_id} approved.")
+    print(f"Startup approved: {startup_id}")
 
+    # Возвращаем полный объект стартапа
     creator_id = target_startup.get("creator_user_id")
     creator_username = get_username_by_id(creator_id)
     creator_profile = get_user_data_by_id(creator_id)
     creator_telegram = creator_profile.get("telegram") if creator_profile else None
     creator_resume_link = creator_profile.get("resume_link") if creator_profile else None
     updated_startup_response = {
-        **target_startup, "creator_username": creator_username,
-        "creator_telegram": creator_telegram, "creator_resume_link": creator_resume_link
+        **target_startup, # Включая обновленный status и stage info
+        "creator_username": creator_username,
+        "creator_telegram": creator_telegram,
+        "creator_resume_link": creator_resume_link
     }
     return jsonify({"message": "Стартап одобрен", "startup": updated_startup_response})
-
 
 @app.route("/startups/<int:startup_id>/reject", methods=["PUT"])
 @admin_required()
@@ -482,21 +515,80 @@ def reject_startup(startup_id):
 
     target_startup["status"] = "rejected"
     target_startup["rejection_reason"] = reason.strip()
-    print(f"Startup {startup_id} rejected.")
+    print(f"Startup rejected: {startup_id}")
 
+    # Возвращаем полный объект стартапа
     creator_id = target_startup.get("creator_user_id")
     creator_username = get_username_by_id(creator_id)
     creator_profile = get_user_data_by_id(creator_id)
     creator_telegram = creator_profile.get("telegram") if creator_profile else None
     creator_resume_link = creator_profile.get("resume_link") if creator_profile else None
     updated_startup_response = {
-        **target_startup, "creator_username": creator_username,
-        "creator_telegram": creator_telegram, "creator_resume_link": creator_resume_link
+        **target_startup, # Включая обновленный status/reason и stage info
+        "creator_username": creator_username,
+        "creator_telegram": creator_telegram,
+        "creator_resume_link": creator_resume_link
     }
     return jsonify({"message": "Стартап отклонен", "startup": updated_startup_response})
 
+@app.route('/startups/<int:startup_id>/timeline', methods=['PUT'])
+@jwt_required()
+def update_startup_timeline(startup_id):
+    """Обновляет планируемые даты этапов стартапа."""
+    identity_str = get_jwt_identity()
+    try:
+        current_user_id = int(identity_str)
+        user_data = get_user_data_by_id(current_user_id)
+        if not user_data:
+            return jsonify({"error": "User?"}), 404
+    except (ValueError, TypeError):
+        return jsonify({"error": "Токен?"}), 422
 
-# 12. Meetups Endpoints
+    target_startup = startups.get(startup_id)
+    if not target_startup:
+        return jsonify({'error': 'Стартап?'}), 404
+
+    is_creator = target_startup.get("creator_user_id") == current_user_id
+    is_admin = user_data.get("role") == "admin"
+    if not is_creator and not is_admin:
+        return jsonify({'error': 'Права?'}), 403
+
+    new_timeline_data = request.json
+    if not isinstance(new_timeline_data, dict):
+        return jsonify({'error': 'Тело - словарь?'}), 400
+
+    current_stage = target_startup.get("current_stage")
+    current_stage_order = get_stage_order(current_stage)
+    updated_timeline = target_startup.get("stage_timeline", {})
+
+    for stage_key, date_value in new_timeline_data.items():
+        stage_order = get_stage_order(stage_key)
+        if stage_order == -1:
+            return jsonify({'error': f'Этап {stage_key}?'}), 400
+        if stage_order <= current_stage_order:
+            return jsonify({'error': f'Нельзя менять {stage_key}'}), 400
+        if not is_valid_iso_date(date_value):
+            return jsonify({'error': f'Дата {stage_key}?'}), 400
+        updated_timeline[stage_key] = date_value if date_value else None
+
+    target_startup["stage_timeline"] = updated_timeline
+    print(f"Timeline updated: {startup_id}")
+
+    # Возвращаем полный объект стартапа
+    creator_id = target_startup.get("creator_user_id")
+    creator_username = get_username_by_id(creator_id)
+    creator_profile = get_user_data_by_id(creator_id)
+    creator_telegram = creator_profile.get("telegram") if creator_profile else None
+    creator_resume_link = creator_profile.get("resume_link") if creator_profile else None
+    updated_startup_response = {
+        **target_startup, # Включая обновленный timeline
+        "creator_username": creator_username,
+        "creator_telegram": creator_telegram,
+        "creator_resume_link": creator_resume_link
+    }
+    return jsonify({"message": "План обновлен", "startup": updated_startup_response})
+
+# 13. Meetups Endpoints
 @app.route("/meetups", methods=["GET"])
 @jwt_required(optional=True)
 def get_meetups():
@@ -508,7 +600,7 @@ def get_meetups():
             current_user_id = int(identity_str)
             user_data = get_user_data_by_id(current_user_id)
             is_requesting_user_admin = user_data and user_data.get("role") == "admin"
-        except:
+        except (ValueError, TypeError):
             current_user_id = None
 
     meetups_list_response = []
@@ -520,7 +612,7 @@ def get_meetups():
             if meetup_data.get("status") == "approved":
                 include_meetup = True
             elif current_user_id is not None and meetup_data.get("creator_user_id") == current_user_id:
-                 if meetup_data.get("status") in ["pending", "rejected"]:
+                if meetup_data.get("status") in ["pending", "rejected"]:
                     include_meetup = True
         if include_meetup:
             meetups_list_response.append(meetup_data)
@@ -528,11 +620,9 @@ def get_meetups():
     sorted_meetups = sorted(meetups_list_response, key=lambda m: m.get("date", ""), reverse=True)
     return jsonify(sorted_meetups)
 
-
 @app.route("/meetups", methods=["POST"])
 @jwt_required()
 def add_meetup():
-    """Добавление митапа со статусом 'pending' (с проверкой профиля)."""
     global next_meetup_id
     identity_str = get_jwt_identity()
     try:
@@ -546,9 +636,9 @@ def add_meetup():
     telegram_username = user_data.get("telegram")
     resume_link = user_data.get("resume_link")
     if not telegram_username or not telegram_username.strip():
-        return jsonify({"error": "Укажите Telegram в Личном кабинете."}), 400
+        return jsonify({"error": "Укажите TG"}), 400
     if not resume_link or not is_valid_url(resume_link):
-        return jsonify({"error": "Укажите ссылку на резюме в Личном кабинете."}), 400
+        return jsonify({"error": "Укажите резюме"}), 400
 
     data = request.json
     title = data.get("title")
@@ -572,9 +662,8 @@ def add_meetup():
         "rejection_reason": None, "creator_user_id": current_user_id
     }
     next_meetup_id += 1
-    print(f"Added PENDING meetup: ID={new_id}")
+    print(f"Added meetup: {new_id}")
     return jsonify({"message": "Митап на рассмотрении", "meetup": meetups[new_id]}), 201
-
 
 @app.route("/meetups/<int:meetup_id>/approve", methods=["PUT"])
 @admin_required()
@@ -586,9 +675,8 @@ def approve_meetup(meetup_id):
         return jsonify({"error": "Только pending"}), 409
     target_meetup["status"] = "approved"
     target_meetup["rejection_reason"] = None
-    print(f"Meetup {meetup_id} approved.")
+    print(f"Meetup approved: {meetup_id}")
     return jsonify({"message": "Митап одобрен", "meetup": target_meetup})
-
 
 @app.route("/meetups/<int:meetup_id>/reject", methods=["PUT"])
 @admin_required()
@@ -604,15 +692,13 @@ def reject_meetup(meetup_id):
         return jsonify({"error": "Причина?"}), 400
     target_meetup["status"] = "rejected"
     target_meetup["rejection_reason"] = reason.strip()
-    print(f"Meetup {meetup_id} rejected.")
+    print(f"Meetup rejected: {meetup_id}")
     return jsonify({"message": "Митап отклонен", "meetup": target_meetup})
 
-
-# 13. Vacancies Endpoints
+# 14. Vacancies Endpoints
 @app.route("/vacancies", methods=["GET"])
 @jwt_required(optional=True)
 def get_vacancies():
-    """Возвращает вакансии (с фильтрами)."""
     current_user_id = None
     is_requesting_user_admin = False
     identity_str = get_jwt_identity()
@@ -621,12 +707,12 @@ def get_vacancies():
             current_user_id = int(identity_str)
             user_data = get_user_data_by_id(current_user_id)
             is_requesting_user_admin = user_data and user_data.get("role") == "admin"
-        except:
+        except (ValueError, TypeError):
             current_user_id = None
 
     filter_by_creator = request.args.get('filter_by_creator', 'false').lower() == 'true'
     if filter_by_creator and current_user_id is None:
-        return jsonify(error="Требуется аутентификация для фильтра 'Только мои'"), 401
+        return jsonify(error="Auth required"), 401
 
     vacancies_list_response = []
     for vacancy_data in vacancies.values():
@@ -643,7 +729,7 @@ def get_vacancies():
                 if vacancy_data.get("status") == "approved":
                     include_vacancy = True
                 elif is_creator:
-                     if vacancy_data.get("status") in ["pending", "rejected"]:
+                    if vacancy_data.get("status") in ["pending", "rejected"]:
                         include_vacancy = True
 
         if include_vacancy:
@@ -657,13 +743,11 @@ def get_vacancies():
             startup_name = startup_info.get("name")
             vacancy_creator_id = vacancy_data.get("creator_user_id")
             startup_creator_id = startup_info.get("creator_user_id")
-
             can_view_applicants = False
             if current_user_id is not None:
                 is_startup_creator = (startup_creator_id == current_user_id)
                 if is_startup_creator or is_requesting_user_admin:
                     can_view_applicants = True
-
             applicants_info = vacancy_data.get("applicants", []) if can_view_applicants else None
             applicant_count = len(vacancy_data.get("applicants", []))
 
@@ -677,9 +761,9 @@ def get_vacancies():
                 "startup_creator_id": startup_creator_id,
                 "applicants": applicants_info, "applicant_count": applicant_count
             })
+
     sorted_vacancies = sorted(vacancies_list_response, key=lambda v: v.get("id", 0), reverse=True)
     return jsonify(sorted_vacancies)
-
 
 @app.route("/vacancies", methods=["POST"])
 @jwt_required()
@@ -691,7 +775,7 @@ def add_vacancy():
         user_data = get_user_data_by_id(current_user_id)
         if not user_data:
             return jsonify({"error": "User?"}), 404
-    except:
+    except (ValueError, TypeError):
         return jsonify({"error": "Токен?"}), 422
 
     data = request.json
@@ -705,14 +789,13 @@ def add_vacancy():
         return jsonify({"error": "Поля?"}), 400
     try:
         startup_id = int(startup_id_req)
-    except:
+    except (ValueError, TypeError):
         return jsonify({"error": "ID стартапа?"}), 400
-
     target_startup = startups.get(startup_id)
     if not target_startup:
         return jsonify({"error": "Стартап?"}), 404
     if target_startup.get("status") != "approved":
-        return jsonify({"error": "Только к одобренным стартапам"}), 403
+        return jsonify({"error": "Только к одобренным"}), 403
 
     is_creator_of_startup = target_startup.get("creator_user_id") == current_user_id
     is_admin = user_data.get("role") == "admin"
@@ -728,12 +811,13 @@ def add_vacancy():
     }
     next_vacancy_id += 1
     new_vacancy_data_enriched = {
-        **vacancies[new_id], "startup_name": target_startup.get("name"),
-        "applicant_count": 0, "startup_creator_id": target_startup.get("creator_user_id")
+        **vacancies[new_id],
+        "startup_name": target_startup.get("name"),
+        "applicant_count": 0,
+        "startup_creator_id": target_startup.get("creator_user_id")
     }
-    print(f"Added PENDING vacancy: ID={new_id}")
+    print(f"Added vacancy: {new_id}")
     return jsonify({"message": "Вакансия на рассмотрении", "vacancy": new_vacancy_data_enriched}), 201
-
 
 @app.route("/vacancies/<int:vacancy_id>/apply", methods=["POST"])
 @jwt_required()
@@ -744,7 +828,7 @@ def apply_for_vacancy(vacancy_id):
         user_data = get_user_data_by_id(current_user_id)
         if not user_data:
             return jsonify({"error": "User?"}), 404
-    except:
+    except (ValueError, TypeError):
         return jsonify({"error": "Токен?"}), 422
 
     target_vacancy = vacancies.get(vacancy_id)
@@ -756,21 +840,21 @@ def apply_for_vacancy(vacancy_id):
     telegram_username = user_data.get("telegram")
     resume_link = user_data.get("resume_link")
     if not telegram_username or not telegram_username.strip():
-        return jsonify({"error": "Укажите TG в профиле"}), 400
+        return jsonify({"error": "Укажите TG"}), 400
     if not resume_link or not is_valid_url(resume_link):
-        return jsonify({"error": "Укажите ссылку на резюме"}), 400
+        return jsonify({"error": "Укажите резюме"}), 400
 
     applicant_ids = [app.get("user_id") for app in target_vacancy.get("applicants", [])]
     if current_user_id in applicant_ids:
         return jsonify({"message": "Уже откликнулись"}), 409
 
     target_vacancy["applicants"].append({
-        "user_id": current_user_id, "telegram": telegram_username.strip(),
+        "user_id": current_user_id,
+        "telegram": telegram_username.strip(),
         "resume_link": resume_link.strip()
     })
-    print(f"Applied: User {current_user_id} to Vacancy {vacancy_id}")
+    print(f"Applied: {current_user_id} to {vacancy_id}")
     return jsonify({"message": "Отклик отправлен"})
-
 
 @app.route("/vacancies/<int:vacancy_id>/approve", methods=["PUT"])
 @admin_required()
@@ -780,24 +864,23 @@ def approve_vacancy(vacancy_id):
         return jsonify({"error": "Вакансия?"}), 404
     if target_vacancy.get("status") != "pending":
         return jsonify({"error": "Только pending"}), 409
-
     target_startup = startups.get(target_vacancy.get("startup_id"))
     if not target_startup or target_startup.get("status") != "approved":
         return jsonify({"error": "Стартап не одобрен"}), 409
 
     target_vacancy["status"] = "approved"
     target_vacancy["rejection_reason"] = None
-    print(f"Vacancy {vacancy_id} approved.")
+    print(f"Vacancy approved: {vacancy_id}")
 
     startup_name = target_startup.get("name")
     startup_creator_id = target_startup.get("creator_user_id")
     updated_vacancy_response = {
-        **target_vacancy, "startup_name": startup_name,
+        **target_vacancy,
+        "startup_name": startup_name,
         "startup_creator_id": startup_creator_id,
         "applicant_count": len(target_vacancy.get("applicants", []))
     }
     return jsonify({"message": "Вакансия одобрена", "vacancy": updated_vacancy_response})
-
 
 @app.route("/vacancies/<int:vacancy_id>/reject", methods=["PUT"])
 @admin_required()
@@ -815,19 +898,20 @@ def reject_vacancy(vacancy_id):
 
     target_vacancy["status"] = "rejected"
     target_vacancy["rejection_reason"] = reason.strip()
-    print(f"Vacancy {vacancy_id} rejected.")
+    print(f"Vacancy rejected: {vacancy_id}")
 
     startup_info = startups.get(target_vacancy.get("startup_id"))
     startup_name = startup_info.get("name") if startup_info else "N/A"
     startup_creator_id = startup_info.get("creator_user_id") if startup_info else None
     updated_vacancy_response = {
-        **target_vacancy, "startup_name": startup_name,
+        **target_vacancy,
+        "startup_name": startup_name,
         "startup_creator_id": startup_creator_id,
         "applicant_count": len(target_vacancy.get("applicants", []))
     }
     return jsonify({"message": "Вакансия отклонена", "vacancy": updated_vacancy_response})
 
-
 # --- Запуск приложения ---
 if __name__ == "__main__":
     app.run(debug=True)
+

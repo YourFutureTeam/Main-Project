@@ -1362,5 +1362,177 @@ h1 {
   color: #999;
 }
 
+/* src/App.css */
+
+/* ... (все твои предыдущие стили) ... */
+
+/* --- Стили для Этапов Стартапа --- */
+
+/* Общий вид раскрытой карточки */
+.card.expanded .card-body {
+  cursor: default;
+}
+.startup-description-short i {
+  color: #6c757d;
+  font-size: 0.9em;
+  margin-left: 5px;
+}
+
+/* Секции внутри раскрытой карточки */
+.startup-details-expanded .startup-section {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+.startup-details-expanded .startup-section:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: none;
+}
+.startup-details-expanded h4 {
+  margin-bottom: 8px;
+  font-size: 0.95em;
+  color: #333;
+  font-weight: 600; /* Чуть жирнее заголовок секции */
+}
+
+/* Отображение текущего этапа */
+.current-stage-display p {
+  margin: 0;
+  font-size: 1em;
+}
+.current-stage-display strong {
+  color: #28a745; /* Зеленый для текущего этапа */
+}
+
+/* Дорожная карта (Timeline) */
+.startup-timeline .timeline-list {
+  list-style: none;
+  padding-left: 0;
+  margin-top: 5px;
+}
+
+.timeline-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 5px; /* Немного больше отступы */
+  border-bottom: 1px dashed #e0e0e0;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+.timeline-item:last-child {
+  border-bottom: none;
+}
+.timeline-item:hover {
+  background-color: #f8f9fa; /* Легкий фон при наведении */
+}
 
 
+.timeline-label {
+  font-weight: 500;
+  flex-grow: 1; /* Занимает доступное место */
+  padding-right: 15px; /* Отступ справа от лейбла */
+}
+
+.timeline-date {
+  flex-shrink: 0; /* Не сжиматься */
+  text-align: right;
+  color: #555;
+  min-width: 150px; /* Минимальная ширина для даты/инпута */
+}
+
+.timeline-status-indicator {
+  font-style: italic;
+  color: #888;
+  margin-left: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Стили для разных состояний этапов */
+.timeline-item.past {
+  opacity: 0.6; /* Сделать прошлые этапы полупрозрачными */
+}
+.timeline-item.past .timeline-label {
+  text-decoration: line-through;
+}
+.timeline-item.current .timeline-label {
+  font-weight: bold;
+  color: #0056b3; /* Синий для текущего */
+}
+.timeline-item.future .timeline-date {
+  font-weight: bold;
+}
+.timeline-item.future .timeline-date input { /* Стиль для инпута */
+  margin-left: 5px;
+}
+
+
+/* Инпут для даты */
+.timeline-date-input {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1em; /* Размер шрифта как у текста */
+  max-width: 145px;
+  box-sizing: border-box;
+}
+.timeline-date-input:disabled {
+  background-color: #e9ecef;
+}
+
+/* Кнопки редактирования Timeline */
+.timeline-edit-actions {
+  margin-top: 15px; /* Больше отступ */
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start; /* Кнопки слева */
+}
+/* Маленькие кнопки */
+.button-save.small,
+.button-cancel.small,
+.button-edit.small {
+  padding: 5px 12px; /* Чуть больше */
+  font-size: 0.85em;
+}
+
+/* Стили для кнопок ред. средств рядом с другими кнопками */
+.card-funds .button-edit.small {
+  margin-top: 10px; /* Больше отступ */
+}
+
+/* Плавное раскрытие */
+.card-body {
+  transition: max-height 0.35s ease-in-out;
+  max-height: 70px; /* Высота в свернутом состоянии (подбери) */
+  overflow: hidden; /* Скрыть лишнее */
+}
+.card.expanded .card-body {
+  max-height: 1500px; /* Макс. высота в раскрытом (с запасом) */
+  overflow: visible; /* Показать все */
+}
+
+/* Классы для режимов редактирования (чтобы блокировать клик на раскрытие) */
+.card.editing-funds .card-body,
+.card.editing-timeline .card-body {
+  cursor: default !important;
+}
+
+/* Стили для формы добавления */
+.add-form .form-field {
+  margin-bottom: 15px;
+}
+.add-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  font-size: 0.9em;
+}
+.add-form select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
