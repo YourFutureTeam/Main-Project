@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 // Импорты компонентов
 import StartupCard from './StartupCard';
 import { Auth } from './Auth';
-import MeetupsTabContent from './MeetupsTabContent';
+import MeetupsTabContent from './MeetupsTabContent'; // Импортируем обновленный
 import VacanciesTabContent from './VacanciesTabContent';
 import ProfileTabContent from './ProfileTabContent';
 import AddStartupForm from './AddStartupForm'; // Определен ниже или импортирован
@@ -197,7 +197,7 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
         <div className="app-container">
             {/* Шапка */}
             <div className="app-header">
-                 <h1>Your Future</h1>
+                 <h1>Инвестируйте в Будущее!</h1>
                  <div className="user-info">
                     <span className="user-greeting">Привет, <span>{username}!</span> {isAdmin && '(Админ)'}</span>
                     <button onClick={onLogout} className="logout-button">Выйти</button>
@@ -254,8 +254,10 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
                 {activeTab === 'meetups' && (
                     <MeetupsTabContent
                         token={token}
-                        isAdmin={isAdmin} // Передаем isAdmin
+                        userId={userId} // Передаем ID текущего пользователя
+                        isAdmin={isAdmin} // Передаем флаг админа
                         authFetch={authFetch}
+                        showMessage={showMessage} // Передаем функцию сообщений
                     />
                  )}
                 {/* Вкладка Вакансии */}

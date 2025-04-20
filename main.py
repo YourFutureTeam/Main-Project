@@ -1,4 +1,4 @@
-# main.py (ПОЛНЫЙ КОД - ФОРМАТИРОВАНИЕ ПРОВЕРЕНО + Модерация Вакансий)
+# main.py (ПОЛНЫЙ КОД - ПРОВЕРЕННОЕ ФОРМАТИРОВАНИЕ + Модерация Митапов)
 
 import os
 import re
@@ -19,7 +19,7 @@ CORS(app)
 # 3. JWT Config
 # ОБЯЗАТЕЛЬНО ЗАМЕНИТЕ ЭТОТ КЛЮЧ!
 app.config["JWT_SECRET_KEY"] = os.environ.get(
-    "JWT_SECRET_KEY", "a-very-strong-secret-key-for-dev-only-FINAL-FINAL-v8"
+    "JWT_SECRET_KEY", "a-very-strong-secret-key-for-dev-only-FINAL-FINAL-v9"
 )
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
@@ -70,7 +70,23 @@ startups = {
         "opensea_link": "https://testnets.opensea.io/collection/your-test-collection-3",
     },
 }
-meetups = {}  # meetup_id -> {..., creator_user_id}
+meetups = {  # meetup_id -> {id, title, date, desc, link, status, rejection_reason, creator_user_id}
+    1: {
+        "id": 1, "title": "Встреча AI Энтузиастов (Одобрено)", "date": "2025-05-15T19:00:00Z",
+        "description": "Обсуждаем новинки...", "link": "https://zoom.us/...",
+        "status": "approved", "rejection_reason": None, "creator_user_id": 0
+    },
+     2: {
+        "id": 2, "title": "Разработка Инди-Игр (Ожидает)", "date": "2025-05-20T18:30:00Z",
+        "description": "Делимся опытом...", "link": "https://discord.gg/...",
+        "status": "pending", "rejection_reason": None, "creator_user_id": 1
+    },
+      3: {
+        "id": 3, "title": "Крипто-митап (Отклонено)", "date": "2025-05-10T12:00:00Z",
+        "description": "Не по теме", "link": "https://...",
+        "status": "rejected", "rejection_reason": "Фокус на стартапах, а не трейдинге", "creator_user_id": 1
+    }
+}
 vacancies = {  # vacancy_id -> {..., applicants:[...], status, rejection_reason, creator_user_id}
     1: {
         "id": 1, "startup_id": 1, "title": "Разработчик Python (Одобрена)", "description": "...",
@@ -90,7 +106,7 @@ vacancies = {  # vacancy_id -> {..., applicants:[...], status, rejection_reason,
 }
 next_startup_id = 4
 next_user_id = 1
-next_meetup_id = 1
+next_meetup_id = 4
 next_vacancy_id = 4
 
 # 6. Create Admin User
@@ -183,7 +199,7 @@ def register():
         "username": username,
         "password_hash": password_hash,
         "role": "user",
-        "full_name": username,  # По умолчанию ФИО = username
+        "full_name": username,
         "telegram": None,
         "resume_link": None
     }
@@ -209,14 +225,12 @@ def login():
 
     if (user_id is not None and user_data
             and check_password_hash(user_data.get("password_hash", ""), password)):
-        # Успешный вход
         identity_str = str(user_id)
         access_token = create_access_token(identity=identity_str)
         user_role = user_data.get("role", "user")
         print(f"Login OK: ID={user_id}, Role={user_role}")
         return jsonify(access_token=access_token, username=username, role=user_role)
     else:
-        # Неверные данные
         print(f"Login failed: User={username}")
         return jsonify({"error": "Неверные учетные данные"}), 401
 
@@ -386,36 +400,111 @@ def update_startup_funds(startup_id):
 
 # 12. Meetups Endpoints
 @app.route("/meetups", methods=["GET"])
+@jwt_required(optional=True)
 def get_meetups():
-    sorted_meetups = sorted(meetups.values(), key=lambda m: m.get("date", ""), reverse=True)
+    """Возвращает митапы в зависимости от роли и статуса."""
+    current_user_id = None
+    is_requesting_user_admin = False
+    identity_str = get_jwt_identity()
+    if identity_str:
+        try:
+            current_user_id = int(identity_str)
+            user_data = get_user_data_by_id(current_user_id)
+            is_requesting_user_admin = user_data and user_data.get("role") == "admin"
+        except:
+            current_user_id = None
+
+    meetups_list_response = []
+    for meetup_data in meetups.values():
+        include_meetup = False
+        if is_requesting_user_admin:
+            include_meetup = True
+        else:
+            if meetup_data.get("status") == "approved":
+                include_meetup = True
+            elif current_user_id is not None and meetup_data.get("creator_user_id") == current_user_id:
+                 if meetup_data.get("status") in ["pending", "rejected"]:
+                    include_meetup = True
+
+        if include_meetup:
+            meetups_list_response.append(meetup_data)
+
+    sorted_meetups = sorted(meetups_list_response, key=lambda m: m.get("date", ""), reverse=True)
     return jsonify(sorted_meetups)
 
 
 @app.route("/meetups", methods=["POST"])
-@admin_required()
+@jwt_required()
 def add_meetup():
+    """Добавление митапа со статусом 'pending' (любым пользователем)."""
     global next_meetup_id
-    admin_user_id = int(get_jwt_identity())
+    current_user_id = int(get_jwt_identity())
     data = request.json
-    title = data.get("title"); meetup_date_str = data.get("date")
-    description = data.get("description"); link = data.get("link")
+    title = data.get("title")
+    meetup_date_str = data.get("date")
+    description = data.get("description")
+    link = data.get("link")
 
     if not all([title, meetup_date_str, description, link]):
-        return jsonify({"error": "Требуются все поля"}), 400
+        return jsonify({"error": "Требуются все поля: title, date, description, link"}), 400
     try:
         datetime.fromisoformat(meetup_date_str.replace("Z", "+00:00"))
     except ValueError:
-        return jsonify({"error": "Неверный формат даты (ISO)"}), 400
+        return jsonify({"error": "Неверный формат даты (ожидается ISO 8601)"}), 400
     if not is_valid_url(link):
         return jsonify({"error": "Неверный формат ссылки"}), 400
 
     new_id = next_meetup_id
     meetups[new_id] = {
-        "id": new_id, "title": title, "date": meetup_date_str,
-        "description": description, "link": link, "creator_user_id": admin_user_id,
+        "id": new_id,
+        "title": title.strip(),
+        "date": meetup_date_str,
+        "description": description.strip(),
+        "link": link.strip(),
+        "status": "pending",
+        "rejection_reason": None,
+        "creator_user_id": current_user_id
     }
     next_meetup_id += 1
-    return jsonify({"message": "Митап добавлен", "meetup": meetups[new_id]}), 201
+    print(f"Added PENDING meetup: ID={new_id} by User={current_user_id}")
+    return jsonify({"message": "Митап добавлен и ожидает одобрения", "meetup": meetups[new_id]}), 201
+
+
+@app.route("/meetups/<int:meetup_id>/approve", methods=["PUT"])
+@admin_required()
+def approve_meetup(meetup_id):
+    """Одобрение митапа админом."""
+    target_meetup = meetups.get(meetup_id)
+    if not target_meetup:
+        return jsonify({"error": "Митап не найден"}), 404
+    if target_meetup.get("status") != "pending":
+        return jsonify({"error": "Одобрить можно только митап в статусе 'pending'"}), 409
+
+    target_meetup["status"] = "approved"
+    target_meetup["rejection_reason"] = None
+    print(f"Meetup {meetup_id} approved by admin.")
+    return jsonify({"message": "Митап одобрен", "meetup": target_meetup})
+
+
+@app.route("/meetups/<int:meetup_id>/reject", methods=["PUT"])
+@admin_required()
+def reject_meetup(meetup_id):
+    """Отклонение митапа админом с указанием причины."""
+    target_meetup = meetups.get(meetup_id)
+    if not target_meetup:
+        return jsonify({"error": "Митап не найден"}), 404
+    if target_meetup.get("status") != "pending":
+        return jsonify({"error": "Отклонить можно только митап в статусе 'pending'"}), 409
+
+    data = request.json
+    reason = data.get("reason")
+    if not reason or not isinstance(reason, str) or not reason.strip():
+        return jsonify({"error": "Необходимо указать причину отклонения"}), 400
+
+    target_meetup["status"] = "rejected"
+    target_meetup["rejection_reason"] = reason.strip()
+    print(f"Meetup {meetup_id} rejected by admin. Reason: {reason.strip()}")
+    return jsonify({"message": "Митап отклонен", "meetup": target_meetup})
 
 
 # 13. Vacancies Endpoints
@@ -507,15 +596,12 @@ def add_vacancy():
         "id": new_id, "startup_id": startup_id, "title": title,
         "description": description, "salary": salary if salary is not None else "Не указана",
         "requirements": requirements, "applicants": [],
-        "status": "pending",
-        "rejection_reason": None,
-        "creator_user_id": current_user_id
+        "status": "pending", "rejection_reason": None, "creator_user_id": current_user_id
     }
     next_vacancy_id += 1
     new_vacancy_data_enriched = {
         **vacancies[new_id],
-        "startup_name": target_startup.get("name"),
-        "applicant_count": 0,
+        "startup_name": target_startup.get("name"), "applicant_count": 0,
         "startup_creator_id": target_startup.get("creator_user_id"),
     }
     print(f"Added PENDING vacancy: ID={new_id} by User={current_user_id}")
@@ -560,30 +646,21 @@ def apply_for_vacancy(vacancy_id):
     return jsonify({"message": "Вы успешно откликнулись"})
 
 
-# 14. Vacancy Moderation Endpoints
 @app.route("/vacancies/<int:vacancy_id>/approve", methods=["PUT"])
 @admin_required()
 def approve_vacancy(vacancy_id):
-    """Одобрение вакансии админом."""
     target_vacancy = vacancies.get(vacancy_id)
-    if not target_vacancy:
-        return jsonify({"error": "Вакансия не найдена"}), 404
-
-    if target_vacancy.get("status") != "pending":
-        return jsonify({"error": "Одобрить можно только вакансию в статусе 'pending'"}), 409
-
-    target_vacancy["status"] = "approved"
-    target_vacancy["rejection_reason"] = None
-    print(f"Vacancy {vacancy_id} approved by admin.")
-
+    if not target_vacancy: return jsonify({"error": "Вакансия?"}), 404
+    if target_vacancy.get("status") != "pending": return jsonify({"error": "Только pending"}), 409
+    target_vacancy["status"] = "approved"; target_vacancy["rejection_reason"] = None
+    print(f"Vacancy {vacancy_id} approved.")
     startup_info = startups.get(target_vacancy.get("startup_id"))
     startup_name = startup_info.get("name") if startup_info else "N/A"
     startup_creator_id = startup_info.get("creator_user_id") if startup_info else None
     updated_vacancy_response = {
-        **target_vacancy,
-        "startup_name": startup_name,
+        **target_vacancy, "startup_name": startup_name,
         "startup_creator_id": startup_creator_id,
-        "applicant_count": len(target_vacancy.get("applicants", [])),
+        "applicant_count": len(target_vacancy.get("applicants", []))
     }
     return jsonify({"message": "Вакансия одобрена", "vacancy": updated_vacancy_response})
 
@@ -591,36 +668,25 @@ def approve_vacancy(vacancy_id):
 @app.route("/vacancies/<int:vacancy_id>/reject", methods=["PUT"])
 @admin_required()
 def reject_vacancy(vacancy_id):
-    """Отклонение вакансии админом с указанием причины."""
     target_vacancy = vacancies.get(vacancy_id)
-    if not target_vacancy:
-        return jsonify({"error": "Вакансия не найдена"}), 404
-
-    if target_vacancy.get("status") != "pending":
-        return jsonify({"error": "Отклонить можно только вакансию в статусе 'pending'"}), 409
-
-    data = request.json
-    reason = data.get("reason")
+    if not target_vacancy: return jsonify({"error": "Вакансия?"}), 404
+    if target_vacancy.get("status") != "pending": return jsonify({"error": "Только pending"}), 409
+    data = request.json; reason = data.get("reason")
     if not reason or not isinstance(reason, str) or not reason.strip():
-        return jsonify({"error": "Необходимо указать причину отклонения"}), 400
-
-    target_vacancy["status"] = "rejected"
-    target_vacancy["rejection_reason"] = reason.strip()
-    print(f"Vacancy {vacancy_id} rejected by admin. Reason: {reason.strip()}")
-
+        return jsonify({"error": "Нужна причина"}), 400
+    target_vacancy["status"] = "rejected"; target_vacancy["rejection_reason"] = reason.strip()
+    print(f"Vacancy {vacancy_id} rejected. Reason: {reason.strip()}")
     startup_info = startups.get(target_vacancy.get("startup_id"))
     startup_name = startup_info.get("name") if startup_info else "N/A"
     startup_creator_id = startup_info.get("creator_user_id") if startup_info else None
     updated_vacancy_response = {
-        **target_vacancy,
-        "startup_name": startup_name,
+        **target_vacancy, "startup_name": startup_name,
         "startup_creator_id": startup_creator_id,
-        "applicant_count": len(target_vacancy.get("applicants", [])),
+        "applicant_count": len(target_vacancy.get("applicants", []))
     }
     return jsonify({"message": "Вакансия отклонена", "vacancy": updated_vacancy_response})
 
 
 # --- Запуск приложения ---
 if __name__ == "__main__":
-    # Запуск с настройками по умолчанию (127.0.0.1:5000)
     app.run(debug=True)
