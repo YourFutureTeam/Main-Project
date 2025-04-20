@@ -1631,6 +1631,7 @@ h1 {
   padding: 20px 0; /* Убираем боковые паддинги, т.к. нет фона */
   /* background-color: #f8f9fa; */ /* <--- ДОЛЖНО БЫТЬ УДАЛЕНО/ЗАКОММЕНТИРОВАНО */
   border-radius: 8px;
+  animation: fadeInUp 0.5s ease-out forwards; /* Применяем анимацию появления */
   max-width: 500px;
   margin-left: auto;
   margin-right: auto;
@@ -1744,6 +1745,7 @@ strong {
 .auth-container form {
   display: flex;
   flex-direction: column;
+  margin: 0 auto;
   gap: 15px;
 }
 
@@ -1864,7 +1866,7 @@ strong {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(15px); /* Можно сделать чуть меньше сдвиг */
   }
   to {
     opacity: 1;
@@ -1872,10 +1874,9 @@ strong {
   }
 }
 
-/* 2. Анимация проявления (fade-in) */
-@keyframes fadeIn {
+@keyframes fadeIn { /* Простая проявка, если нужна */
   from { opacity: 0; }
-  to { opacity: 1; }
+  to   { opacity: 1; }
 }
 
 /* --- ПРИМЕНЕНИЕ АНИМАЦИЙ --- */
@@ -1910,20 +1911,21 @@ strong {
 
 /* б) Карточки (Startup, Meetup, Vacancy) */
 .card {
-  /* ... другие стили .card ... */
-  /* Увеличиваем длительность и добавляем cubic-bezier для большей плавности */
-  transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
-              box-shadow 0.35s cubic-bezier(0.25, 0.8, 0.25, 1),
-              opacity 0.5s ease-out; /* Для анимации появления */
-  /* Добавляем анимацию появления */
-  animation: fadeInUp 0.6s ease-out 0.1s backwards forwards; /* Задержка 0.1s */
-  /* opacity: 0; */ /* Убедись, что эта строка УДАЛЕНА или закомментирована! */
+  /* ... transition для hover ... */
+  animation: fadeInUp 0.5s ease-out backwards forwards; /* Используем fadeInUp */
+  /* opacity: 0; */ /* УБРАНО! */
 }
-/* Если карточек много, анимация fadeIn может быть навязчивой.
-   Альтернатива - только hover: */
-/* .card {
-  transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
-} */
+
+/* --- Staggering для карточек в списке --- */
+/* Применяем ТОЛЬКО задержку к nth-child */
+.card-list .card:nth-child(1) { animation-delay: 0.1s; }
+.card-list .card:nth-child(2) { animation-delay: 0.18s; } /* Шаг 0.08s - подбери */
+.card-list .card:nth-child(3) { animation-delay: 0.26s; }
+.card-list .card:nth-child(4) { animation-delay: 0.34s; }
+.card-list .card:nth-child(5) { animation-delay: 0.42s; }
+.card-list .card:nth-child(6) { animation-delay: 0.50s; }
+.card-list .card:nth-child(7) { animation-delay: 0.58s; }
+.card-list .card:nth-child(8) { animation-delay: 0.66s; }
 
 /* в) Раскрытие StartupCard */
 .card .card-body {
@@ -1953,15 +1955,18 @@ strong {
     opacity: 1;
 }
 /* Если используется просто условный рендер, можно анимировать так: */
+/* Анимация для .add-form, если она появляется/исчезает */
 .add-form {
-    animation: fadeIn 0.4s ease-out;
-    /* Этот вариант сработает только при первом рендере формы */
+  animation: fadeInUp 0.4s ease-out forwards;
+  /* opacity: 0; */ /* УБРАНО! */
+  margin-top: 20px; /* Добавим отступ сверху */
+  margin-bottom: 30px; /* И снизу */
 }
 
 /* д) Переключение вкладок */
-.tab-content-area > div { /* Применяем ко всем дочерним div (предполагая, что там контент вкладок) */
-  animation: fadeIn 0.3s ease-in-out;
-  /* Эта анимация будет срабатывать каждый раз при переключении, если контент перерисовывается */
+.tab-content-area > div {
+  animation: fadeInUp 0.4s ease-out forwards; /* Используем fadeInUp */
+  /* opacity: 0; */ /* УБРАНО! */
 }
 
 /* е) Hover-эффекты (Убедимся, что transition есть у кнопок) */
