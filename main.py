@@ -1,11 +1,11 @@
-# main.py (ПОЛНЫЙ КОД - ИСПРАВЛЕННОЕ ФОРМАТИРОВАНИЕ + БАЗОВЫЙ CORS)
+# main.py (ПОЛНЫЙ КОД - ПОСЛЕДНЯЯ ПОПЫТКА ФОРМАТИРОВАНИЯ)
 
 import os
 import re
 from datetime import datetime, timedelta, timezone
 
-from flask import Flask, jsonify, request, make_response  # Убедимся, что make_response импортирован, если вдруг понадобится
-from flask_cors import CORS  # Убедитесь, что установлен: pip install Flask-Cors
+from flask import Flask, jsonify, request, make_response
+from flask_cors import CORS
 from flask_jwt_extended import (JWTManager, create_access_token,
                                 get_jwt_identity, jwt_required)
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -14,15 +14,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 app = Flask(__name__)
 
 # 2. Базовая инициализация CORS (СРАЗУ ПОСЛЕ app = Flask)
-# Разрешает CORS для всех доменов и маршрутов по умолчанию
 CORS(app)
 
 # 3. JWT Config
 # ОБЯЗАТЕЛЬНО ЗАМЕНИТЕ ЭТОТ КЛЮЧ!
 app.config["JWT_SECRET_KEY"] = os.environ.get(
-    "JWT_SECRET_KEY", "a-very-strong-secret-key-please-change-me"
+    "JWT_SECRET_KEY", "a-very-strong-secret-key-for-dev-only-FINAL-FINAL-v7" # Свой ключ
 )
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)  # Время жизни токена
+app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
 jwt = JWTManager(app)
 
 
@@ -58,8 +57,8 @@ def revoked_token_callback(jwt_header, jwt_payload):
 
 
 # 5. Data Stores (In-Memory)
-users = {}  # user_id (int) -> {"username", "password_hash", "role"}
-startups = {  # startup_id (int) -> {..., "creator_user_id", "opensea_link"}
+users = {}  # user_id (int) -> {"username", "password_hash", "role", "full_name", "telegram", "resume_link"}
+startups = {
     1: {
         "id": 1, "name": "ТехноИнновации Альфа", "description": "Разработка ИИ.",
         "funds_raised": {"ETH": 10.5}, "creator_user_id": 0,
@@ -71,8 +70,8 @@ startups = {  # startup_id (int) -> {..., "creator_user_id", "opensea_link"}
         "opensea_link": "https://testnets.opensea.io/collection/your-test-collection-3",
     },
 }
-meetups = {}  # meetup_id (int) -> {id, title, date (ISO str), description, link, creator_user_id}
-vacancies = {  # vacancy_id (int) -> {..., applicants: [{"user_id", "telegram", "resume_link"}]}
+meetups = {}
+vacancies = {
     1: {
         "id": 1, "startup_id": 1, "title": "Разработчик Python", "description": "...",
         "salary": "200000 руб.", "requirements": "...", "applicants": [],
@@ -92,7 +91,10 @@ next_vacancy_id = 4
 admin_username = "admin"
 admin_password = "verysecretadminpassword"  # СМЕНИТЕ ПАРОЛЬ!
 admin_pass_hash = generate_password_hash(admin_password)
-users[0] = {"username": admin_username, "password_hash": admin_pass_hash, "role": "admin"}
+users[0] = {
+    "username": admin_username, "password_hash": admin_pass_hash, "role": "admin",
+    "full_name": "Администратор Сайта", "telegram": "@admin_tg_official", "resume_link": "http://example.com/admin"
+}
 print(f"--- Admin created: username='{admin_username}', password='{admin_password}' ---")
 
 
@@ -109,14 +111,14 @@ def get_username_by_id(user_id):
     except (ValueError, TypeError, AttributeError):
         return "Неизвестный ID"
     user_data = get_user_data_by_id(user_id_int)
-    return user_data["username"] if user_data else "Неизвестный"
+    # Используем .get для безопасного доступа к ключу 'username'
+    return user_data.get("username", "Неизвестный") if user_data else "Неизвестный"
 
 
 def is_valid_url(url):
     """Простая проверка URL на соответствие формату http(s)://..."""
     if not url or not isinstance(url, str):
         return False
-    # Простая проверка URL
     pattern = re.compile(r'https?://[^\s/$.?#].[^\s]*', re.IGNORECASE)
     return bool(pattern.match(url.strip()))
 
@@ -138,8 +140,9 @@ def admin_required():
                           f"(role: {user_data.get('role') if user_data else 'not found'})")
                     return jsonify(error="Требуется доступ администратора"), 403
             except (ValueError, TypeError):
-                print(f"Admin access denied due to invalid identity: {identity_str}")
-                return jsonify(error="Недействительный идентификатор пользователя в токене"), 422
+                 print(f"Admin access denied due to invalid identity: {identity_str}")
+                 return jsonify(error="Недействительный идентификатор пользователя в токене"), 422
+        # Копируем метаданные
         decorator.__name__ = fn.__name__
         decorator.__doc__ = fn.__doc__
         return decorator
@@ -151,7 +154,7 @@ def admin_required():
 # 9. Auth Endpoints
 @app.route("/register", methods=["POST"])
 def register():
-    """Регистрация нового пользователя (role='user')."""
+    """Регистрация нового пользователя (с инициализацией полей профиля)."""
     global next_user_id
     data = request.json
     username = data.get("username")
@@ -165,17 +168,24 @@ def register():
         return jsonify({"error": "Имя пользователя 'admin' зарезервировано"}), 409
 
     existing_user_id = next(
-        (uid for uid, udata in users.items() if udata["username"] == username), None
+        (uid for uid, udata in users.items() if udata.get("username") == username), None
     )
     if existing_user_id is not None:
         return jsonify({"error": "Имя пользователя уже занято"}), 409
 
     password_hash = generate_password_hash(password)
     user_id = next_user_id
-    users[user_id] = {"username": username, "password_hash": password_hash, "role": "user"}
+    users[user_id] = {
+        "username": username,
+        "password_hash": password_hash,
+        "role": "user",
+        "full_name": username,  # По умолчанию ФИО = username
+        "telegram": None,
+        "resume_link": None
+    }
     next_user_id += 1
-    print(f"Registered user: ID={user_id}, Username={username}, Role='user'")
-    return jsonify({"message": "Пользователь успешно зарегистрирован"}), 201
+    print(f"Registered: ID={user_id}, User={username}")
+    return jsonify({"message": "Регистрация успешна"}), 201
 
 
 @app.route("/login", methods=["POST"])
@@ -189,12 +199,12 @@ def login():
         return jsonify({"error": "Требуются имя пользователя и пароль"}), 400
 
     user_id = next(
-        (uid for uid, udata in users.items() if udata["username"] == username), None
+        (uid for uid, udata in users.items() if udata.get("username") == username), None
     )
     user_data = get_user_data_by_id(user_id)
 
     if (user_id is not None and user_data
-            and check_password_hash(user_data["password_hash"], password)):
+            and check_password_hash(user_data.get("password_hash", ""), password)):
         # Успешный вход
         identity_str = str(user_id)
         access_token = create_access_token(identity=identity_str)
@@ -207,10 +217,93 @@ def login():
         return jsonify({"error": "Неверные учетные данные"}), 401
 
 
-# 10. Startups Endpoints
+# 10. Profile Endpoints
+@app.route("/profile", methods=["GET"])
+@jwt_required()
+def get_profile():
+    """Возвращает данные профиля текущего пользователя."""
+    identity_str = get_jwt_identity()
+    try:
+        current_user_id = int(identity_str)
+        user_data = get_user_data_by_id(current_user_id)
+        if not user_data:
+            return jsonify({"error": "Пользователь не найден"}), 404
+
+        # Возвращаем только нужные поля профиля
+        profile_data = {
+            "id": current_user_id,
+            "username": user_data.get("username"),
+            "role": user_data.get("role"),
+            "full_name": user_data.get("full_name"),
+            "telegram": user_data.get("telegram"),
+            "resume_link": user_data.get("resume_link")
+        }
+        return jsonify(profile_data)
+
+    except (ValueError, TypeError):
+        return jsonify({"error": "Недействительный токен"}), 422
+
+
+@app.route("/profile", methods=["PUT"])
+@jwt_required()
+def update_profile():
+    """Обновляет данные профиля текущего пользователя."""
+    identity_str = get_jwt_identity()
+    try:
+        current_user_id = int(identity_str)
+        user_data = get_user_data_by_id(current_user_id)
+        if not user_data:
+            return jsonify({"error": "Пользователь не найден"}), 404
+    except (ValueError, TypeError):
+        return jsonify({"error": "Недействительный токен"}), 422
+
+    data = request.json
+    full_name = data.get("full_name")
+    telegram = data.get("telegram")
+    resume_link = data.get("resume_link")
+
+    updated = False
+    # Обновляем ФИО
+    if full_name is not None and isinstance(full_name, str) and full_name.strip():
+        user_data["full_name"] = full_name.strip()
+        updated = True
+
+    # Обновляем Telegram
+    if telegram is not None:
+        tg_value = telegram.strip() if isinstance(telegram, str) else None
+        if tg_value and not tg_value.startswith('@'):
+            tg_value = '@' + tg_value
+        user_data["telegram"] = tg_value if tg_value else None # Сохраняем null если пустой
+        updated = True
+
+    # Обновляем ссылку на резюме
+    if resume_link is not None:
+        resume_value = resume_link.strip() if isinstance(resume_link, str) else None
+        if resume_value and not is_valid_url(resume_value):
+            return jsonify({"error": "Неверный формат ссылки на резюме"}), 400
+        user_data["resume_link"] = resume_value if resume_value else None # null если пустой
+        updated = True
+
+    if not updated:
+        return jsonify({"message": "Нет данных для обновления"}), 200
+
+    print(f"Profile updated for User ID: {current_user_id}")
+
+    # Возвращаем обновленные данные
+    updated_profile_data = {
+        "id": current_user_id,
+        "username": user_data.get("username"),
+        "role": user_data.get("role"),
+        "full_name": user_data.get("full_name"),
+        "telegram": user_data.get("telegram"),
+        "resume_link": user_data.get("resume_link")
+    }
+    return jsonify({"message": "Профиль успешно обновлен", "profile": updated_profile_data})
+
+
+# 11. Startups Endpoints
 @app.route("/startups", methods=["GET"])
 def get_startups():
-    """Возвращает список всех стартапов."""
     startups_list = []
     for startup_data in startups.values():
         creator_id = startup_data.get("creator_user_id")
@@ -222,7 +315,6 @@ def get_startups():
 @app.route("/startups", methods=["POST"])
 @jwt_required()
 def add_startup():
-    """Добавление нового стартапа."""
     global next_startup_id
     current_user_id = int(get_jwt_identity())
     data = request.json
@@ -233,20 +325,16 @@ def add_startup():
     if not name or not description:
         return jsonify({"error": "Имя и описание обязательны"}), 400
     if not opensea_link or not is_valid_url(opensea_link):
-        return jsonify({"error": "Ссылка OpenSea обязательна и должна быть валидным URL"}), 400
+        return jsonify({"error": "Ссылка OpenSea обязательна и валидна"}), 400
 
     new_id = next_startup_id
     startups[new_id] = {
-        "id": new_id,
-        "name": name.strip(),
-        "description": description.strip(),
+        "id": new_id, "name": name.strip(), "description": description.strip(),
         "funds_raised": {"ETH": 0, "BTC": 0, "USDT": 0},
-        "creator_user_id": current_user_id,
-        "opensea_link": opensea_link.strip(),
+        "creator_user_id": current_user_id, "opensea_link": opensea_link.strip(),
     }
     next_startup_id += 1
     print(f"Added startup: ID={new_id}, Creator ID={current_user_id}")
-
     creator_username = get_username_by_id(current_user_id)
     new_startup_data = {**startups[new_id], "creator_username": creator_username}
     return jsonify({"message": "Стартап добавлен", "startup": new_startup_data}), 201
@@ -255,13 +343,11 @@ def add_startup():
 @app.route('/startups/<int:startup_id>/funds', methods=['PUT'])
 @jwt_required()
 def update_startup_funds(startup_id):
-    """Обновление собранных средств стартапа (создатель или админ)."""
     identity_str = get_jwt_identity()
     try:
         current_user_id = int(identity_str)
         user_data = get_user_data_by_id(current_user_id)
-        if not user_data:
-            return jsonify({"error": "Пользователь не найден"}), 404
+        if not user_data: return jsonify({"error": "Пользователь не найден"}), 404
     except (ValueError, TypeError):
         return jsonify({"error": "Недействительный токен"}), 422
 
@@ -273,11 +359,11 @@ def update_startup_funds(startup_id):
     is_admin = user_data.get("role") == "admin"
 
     if not is_creator and not is_admin:
-        return jsonify({'error': 'Изменять средства могут создатель или админ'}), 403
+        return jsonify({'error': 'Изменять могут создатель или админ'}), 403
 
     new_funds_data = request.json
     if not isinstance(new_funds_data, dict):
-        return jsonify({'error': 'Тело запроса должно быть {"валюта": сумма}'}), 400
+        return jsonify({'error': 'Тело запроса {"валюта": сумма}'}), 400
 
     validated_funds = {}
     allowed_currencies = ["ETH", "BTC", "USDT"]
@@ -287,24 +373,21 @@ def update_startup_funds(startup_id):
             return jsonify({"error": f"Валюта {currency} не разрешена"}), 400
         try:
             amount_float = float(amount)
-            if amount_float < 0:
-                raise ValueError("Сумма < 0")
+            if amount_float < 0: raise ValueError("Сумма < 0")
             validated_funds[upper_currency] = amount_float
         except (ValueError, TypeError):
              return jsonify({"error": f"Неверная сумма для {currency}"}), 400
 
     target_startup["funds_raised"] = validated_funds
-    print(f"Updated funds for startup {startup_id} by User {current_user_id}")
-
+    print(f"Updated funds for startup {startup_id}")
     creator_username = get_username_by_id(target_startup.get("creator_user_id"))
     updated_startup_response = {**target_startup, "creator_username": creator_username}
     return jsonify({"message": "Средства обновлены", "startup": updated_startup_response})
 
 
-# 11. Meetups Endpoints
+# 12. Meetups Endpoints
 @app.route("/meetups", methods=["GET"])
 def get_meetups():
-    """Возвращает список митапов."""
     sorted_meetups = sorted(meetups.values(), key=lambda m: m.get("date", ""), reverse=True)
     return jsonify(sorted_meetups)
 
@@ -312,22 +395,18 @@ def get_meetups():
 @app.route("/meetups", methods=["POST"])
 @admin_required()
 def add_meetup():
-    """Добавление митапа (только админ)."""
     global next_meetup_id
     admin_user_id = int(get_jwt_identity())
     data = request.json
-    title = data.get("title")
-    meetup_date_str = data.get("date")
-    description = data.get("description")
-    link = data.get("link")
+    title = data.get("title"); meetup_date_str = data.get("date")
+    description = data.get("description"); link = data.get("link")
 
     if not all([title, meetup_date_str, description, link]):
         return jsonify({"error": "Требуются все поля"}), 400
     try:
-        # Проверка ISO с учетом таймзоны
         datetime.fromisoformat(meetup_date_str.replace("Z", "+00:00"))
     except ValueError:
-        return jsonify({"error": "Неверный формат даты (ожидается ISO)"}), 400
+        return jsonify({"error": "Неверный формат даты (ISO)"}), 400
     if not is_valid_url(link):
         return jsonify({"error": "Неверный формат ссылки"}), 400
 
@@ -337,25 +416,21 @@ def add_meetup():
         "description": description, "link": link, "creator_user_id": admin_user_id,
     }
     next_meetup_id += 1
-    print(f"Added meetup: ID={new_id}, Admin ID={admin_user_id}")
     return jsonify({"message": "Митап добавлен", "meetup": meetups[new_id]}), 201
 
 
-# 12. Vacancies Endpoints
+# 13. Vacancies Endpoints
 @app.route("/vacancies", methods=["GET"])
 @jwt_required(optional=True)
 def get_vacancies():
-    """Возвращает вакансии (детали откликов только для создателя/админа)."""
-    current_user_id = None
-    is_requesting_user_admin = False
-    identity_str = get_jwt_identity()
+    current_user_id = None; is_requesting_user_admin = False; identity_str = get_jwt_identity()
     if identity_str:
         try:
             current_user_id = int(identity_str)
             user_data = get_user_data_by_id(current_user_id)
             is_requesting_user_admin = user_data and user_data.get("role") == "admin"
         except:
-            current_user_id = None # Игнорируем невалидный токен
+            current_user_id = None
 
     vacancies_list_response = []
     for vacancy_data in vacancies.values():
@@ -366,7 +441,7 @@ def get_vacancies():
 
         can_view_applicants = False
         if current_user_id is not None:
-            is_startup_creator = startup_creator_id == current_user_id
+            is_startup_creator = (startup_creator_id == current_user_id)
             if is_startup_creator or is_requesting_user_admin:
                 can_view_applicants = True
 
@@ -387,23 +462,18 @@ def get_vacancies():
 @app.route("/vacancies", methods=["POST"])
 @jwt_required()
 def add_vacancy():
-    """Добавление вакансии (создатель или админ)."""
     global next_vacancy_id
     identity_str = get_jwt_identity()
     try:
-        current_user_id = int(identity_str)
-        user_data = get_user_data_by_id(current_user_id)
+        current_user_id = int(identity_str); user_data = get_user_data_by_id(current_user_id)
     except:
         return jsonify({"error": "Недействительный токен"}), 422
     if not user_data:
         return jsonify({"error": "Пользователь не найден"}), 404
 
     data = request.json
-    startup_id_req = data.get("startup_id")
-    title = data.get("title")
-    description = data.get("description")
-    salary = data.get("salary")
-    requirements = data.get("requirements")
+    startup_id_req = data.get("startup_id"); title = data.get("title")
+    description = data.get("description"); salary = data.get("salary"); requirements = data.get("requirements")
 
     if not all([startup_id_req, title, description, requirements]):
         return jsonify({"error": "Требуются поля: startup_id, title, description, requirements"}), 400
@@ -419,7 +489,7 @@ def add_vacancy():
     is_creator = target_startup.get("creator_user_id") == current_user_id
     is_admin = user_data.get("role") == "admin"
     if not is_creator and not is_admin:
-        return jsonify({"error": "Добавлять вакансии могут создатель или админ"}), 403
+        return jsonify({"error": "Добавлять могут создатель или админ"}), 403
 
     new_id = next_vacancy_id
     vacancies[new_id] = {
@@ -430,40 +500,35 @@ def add_vacancy():
     next_vacancy_id += 1
     new_vacancy_data_enriched = {
         **vacancies[new_id],
-        "startup_name": target_startup.get("name"),
-        "applicant_count": 0,
+        "startup_name": target_startup.get("name"), "applicant_count": 0,
         "startup_creator_id": target_startup.get("creator_user_id"),
     }
-    # Не отправляем 'applicants' при создании
     return jsonify({"message": "Вакансия добавлена", "vacancy": new_vacancy_data_enriched}), 201
 
 
 @app.route("/vacancies/<int:vacancy_id>/apply", methods=["POST"])
 @jwt_required()
 def apply_for_vacancy(vacancy_id):
-    """Отклик на вакансию с TG и резюме."""
     identity_str = get_jwt_identity()
     try:
         current_user_id = int(identity_str)
-    except:
+        user_data = get_user_data_by_id(current_user_id)
+        if not user_data: return jsonify({"error": "Пользователь не найден"}), 404
+    except (ValueError, TypeError):
         return jsonify({"error": "Недействительный токен"}), 422
 
     target_vacancy = vacancies.get(vacancy_id)
-    if not target_vacancy:
-        return jsonify({"error": "Вакансия не найдена"}), 404
+    if not target_vacancy: return jsonify({"error": "Вакансия не найдена"}), 404
 
-    data = request.json
-    telegram_username = data.get("telegram")
-    resume_link = data.get("resume_link")
+    telegram_username = user_data.get("telegram")
+    resume_link = user_data.get("resume_link")
 
-    if not telegram_username or not isinstance(telegram_username, str) or not telegram_username.strip():
-        return jsonify({"error": "Необходимо указать Telegram username"}), 400
+    if not telegram_username or not telegram_username.strip():
+        return jsonify({"error": "Укажите Telegram в профиле"}), 400
     if not resume_link or not is_valid_url(resume_link):
-        return jsonify({"error": "Необходима валидная ссылка на резюме"}), 400
+        return jsonify({"error": "Укажите валидную ссылку на резюме в профиле"}), 400
 
-    if not telegram_username.startswith("@"):
-        telegram_username = "@" + telegram_username
-
+    # Проверка на повторный отклик
     applicant_ids = [app.get("user_id") for app in target_vacancy.get("applicants", [])]
     if current_user_id in applicant_ids:
         return jsonify({"message": "Вы уже откликнулись"}), 409
@@ -476,8 +541,7 @@ def apply_for_vacancy(vacancy_id):
     print(f"Applied: User {current_user_id} to Vacancy {vacancy_id}")
     return jsonify({"message": "Вы успешно откликнулись"})
 
+
 # --- Запуск приложения ---
 if __name__ == "__main__":
-    # Используем настройки по умолчанию (127.0.0.1:5000)
-    # debug=True использовать ТОЛЬКО для разработки!
     app.run(debug=True)

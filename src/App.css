@@ -947,6 +947,110 @@ h1 {
   border-color: #adb5bd;
 }
 
+/* src/App.css */
+
+/* ... (все предыдущие стили) ... */
+
+/* --- Стили для Личного кабинета (ProfileTabContent) --- */
+.profile-content {
+  max-width: 700px; /* Ограничим ширину для лучшей читаемости */
+  margin: 20px auto; /* Центрируем */
+  padding: 0 15px; /* Небольшие боковые отступы */
+}
+
+.profile-content h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: #343a40;
+}
+
+.profile-details.card { /* Используем стиль карточки для фона и тени */
+  padding: 25px 30px; /* Внутренние отступы */
+}
+
+.profile-field {
+  display: flex;
+  align-items: baseline; /* Выравниваем текст и поля */
+  margin-bottom: 18px; /* Отступ между полями */
+  flex-wrap: wrap; /* Перенос на маленьких экранах */
+  gap: 5px 10px; /* Отступы при переносе */
+}
+
+.profile-label {
+  font-weight: 600;
+  color: #495057;
+  width: 120px; /* Фиксированная ширина метки */
+  flex-shrink: 0; /* Не сжимать */
+  padding-right: 10px; /* Отступ справа */
+  text-align: right;
+}
+
+.profile-value {
+  color: #212529;
+  word-break: break-word; /* Перенос длинных значений */
+}
+.profile-value a { /* Стиль для ссылки на резюме */
+  color: #007bff;
+  text-decoration: none;
+}
+.profile-value a:hover {
+  text-decoration: underline;
+}
+
+/* Стили для полей ввода в режиме редактирования */
+.profile-input {
+  flex-grow: 1; /* Занимает доступное пространство */
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 1em;
+  min-width: 200px; /* Минимальная ширина поля */
+}
+.profile-input:focus {
+  border-color: #80bdff;
+  outline: 0;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+.profile-input:disabled {
+  background-color: #e9ecef;
+  opacity: 0.7;
+}
+
+/* Разделитель */
+.profile-details hr {
+  border: none;
+  border-top: 1px solid #e9ecef;
+  margin: 25px 0;
+}
+
+/* Кнопки управления */
+.profile-actions {
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #e9ecef;
+  display: flex;
+  justify-content: flex-end; /* Кнопки справа */
+  gap: 10px;
+}
+
+/* Используем те же стили кнопок, что и в форме редактирования средств */
+.profile-actions .button-save,
+.profile-actions .button-cancel,
+.profile-actions .button-edit {
+  padding: 8px 18px; /* Немного крупнее */
+  font-size: 0.95em;
+}
+.profile-actions .button-edit { /* Переопределяем стиль кнопки Редактировать */
+  /* Используем стили .button-link-secondary */
+  background-color: #6c757d;
+  color: white;
+  border-color: #6c757d;
+}
+.profile-actions .button-edit:hover:not(:disabled) {
+  background-color: #5a6268;
+  border-color: #545b62;
+}
+
 /* ... (остальные стили) ... */
 
 

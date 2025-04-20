@@ -1,168 +1,266 @@
-// src/App.js (ПОЛНЫЙ КОД - С редактированием средств)
+// src/App.js (ПОЛНЫЙ КОД - ВСЕ ФУНКЦИИ РАСКРЫТЫ)
 
 import React, { useState, useEffect, useCallback } from 'react';
 // Импорты компонентов
-import StartupCard from './StartupCard'; // Будет принимать новые пропсы
+import StartupCard from './StartupCard';
 import { Auth } from './Auth';
 import MeetupsTabContent from './MeetupsTabContent';
 import VacanciesTabContent from './VacanciesTabContent';
+import ProfileTabContent from './ProfileTabContent';
+import AddStartupForm from './AddStartupForm'
 // Импорт CSS
 import './App.css';
 
-// --- Компонент AddStartupForm (определен здесь для полноты) ---
-function AddStartupForm({ onAdd, onCancel, isLoading }) {
-    const [name, setName] = useState('');
-    const [description, setDescription] = useState('');
-    const [openseaLink, setOpenseaLink] = useState('');
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (!name.trim() || !description.trim() || !openseaLink.trim()) { alert('Заполните все поля'); return; }
-        if (!openseaLink.trim().toLowerCase().startsWith('http')) { alert('Ссылка должна начинаться с http'); return; }
-        onAdd({ name: name.trim(), description: description.trim(), opensea_link: openseaLink.trim() });
+// --- Основное содержимое приложения (для залогиненного пользователя) ---
+function AppContent({ token, username, userId, userRole, onLogout }) {
+    const [activeTab, setActiveTab] = useState('startups'); // Текущая вкладка
+    const isAdmin = userRole === 'admin'; // Флаг админа
+
+    // Состояния для стартапов
+    const [startups, setStartups] = useState([]); // Список всех стартапов
+    const [searchQuery, setSearchQuery] = useState(''); // Поисковый запрос для стартапов
+    const [showAddStartupForm, setShowAddStartupForm] = useState(false); // Показ формы добавления стартапа
+
+    // Общие состояния
+    const [message, setMessage] = useState(''); // Сообщения для пользователя
+    const [messageType, setMessageType] = useState('');
+    const [loading, setLoading] = useState(false); // Общий лоадер для ЗАГРУЗКИ списков
+    const [fetchError, setFetchError] = useState(''); // Ошибка загрузки списков
+
+    // Состояния для РЕДАКТИРОВАНИЯ СРЕДСТВ стартапа
+    const [editingStartupId, setEditingStartupId] = useState(null); // ID редактируемого стартапа
+    const [editingFunds, setEditingFunds] = useState({}); // Временные данные для формы редактирования
+    const [updatingFunds, setUpdatingFunds] = useState(false); // Лоадер для ОПЕРАЦИИ обновления средств
+
+    // Состояние для ДАННЫХ ПРОФИЛЯ текущего пользователя
+    const [userProfileData, setUserProfileData] = useState(null);
+    const [loadingProfile, setLoadingProfile] = useState(true); // Индикатор загрузки профиля
+
+    // --- ФУНКЦИИ ---
+
+    // Показать временное сообщение
+    const showMessage = (text, type = 'info') => {
+        setMessage(text);
+        setMessageType(type);
+        // Убираем сообщение через 5 секунд
+        setTimeout(() => {
+            setMessage('');
+            setMessageType('');
+        }, 5000);
     };
 
-    return (
-        <form onSubmit={handleSubmit} className="add-startup-form add-form">
-            <h3>Добавить новый стартап</h3>
-            <input type="text" placeholder="Название" value={name} onChange={(e) => setName(e.target.value)} required disabled={isLoading} />
-            <textarea placeholder="Описание" value={description} onChange={(e) => setDescription(e.target.value)} required disabled={isLoading} />
-            <input type="url" placeholder="Ссылка OpenSea (https://...)" value={openseaLink} onChange={(e) => setOpenseaLink(e.target.value)} required pattern="https?://.+" title="URL с http(s)://" disabled={isLoading} className="input-opensea" />
-            <div className="form-buttons">
-                <button type="submit" disabled={isLoading}>{isLoading ? 'Добавление...' : 'Добавить'}</button>
-                <button type="button" onClick={onCancel} className="cancel-button" disabled={isLoading}>Отмена</button>
-            </div>
-        </form>
-    );
-}
-
-
-// --- Основное содержимое приложения ---
-function AppContent({ token, username, userId, userRole, onLogout }) {
-    const [activeTab, setActiveTab] = useState('startups');
-    const isAdmin = userRole === 'admin';
-    const [startups, setStartups] = useState([]);
-    const [searchQuery, setSearchQuery] = useState('');
-    const [showAddStartupForm, setShowAddStartupForm] = useState(false);
-    const [message, setMessage] = useState('');
-    const [messageType, setMessageType] = useState('');
-    const [loading, setLoading] = useState(false); // Лоадер для ЗАГРУЗКИ списков
-    const [fetchError, setFetchError] = useState('');
-
-    // Состояния для РЕДАКТИРОВАНИЯ СРЕДСТВ
-    const [editingStartupId, setEditingStartupId] = useState(null);
-    const [editingFunds, setEditingFunds] = useState({});
-    const [updatingFunds, setUpdatingFunds] = useState(false); // Лоадер для ОПЕРАЦИИ обновления
-
-    const showMessage = (text, type) => { setMessage(text); setMessageType(type); setTimeout(() => { setMessage(''); setMessageType(''); }, 5000); };
-    const authFetch = useCallback(async (url, options = {}) => { /* ... (Код authFetch без изменений) ... */
-        const headers = { 'Content-Type': 'application/json', ...options.headers, 'Authorization': `Bearer ${token}`};
-        // console.log(`AuthFetch to ${url}: Method=${options.method || 'GET'}`);
-        try { const response = await fetch(`http://127.0.0.1:5000${url}`, { ...options, headers });
+    // Обертка для fetch с добавлением токена
+    const authFetch = useCallback(async (url, options = {}) => {
+        const headers = {
+            'Content-Type': 'application/json',
+            ...options.headers,
+            'Authorization': `Bearer ${token}` // Добавляем токен
+        };
+        console.log(`AuthFetch to ${url}: Method=${options.method || 'GET'}`); // Лог запроса
+        try {
+            const response = await fetch(`http://127.0.0.1:5000${url}`, { ...options, headers });
+            // Попытка получить JSON даже при ошибке
             const data = await response.json().catch(() => ({}));
-            if (!response.ok) { if (response.status === 401 || response.status === 422) { console.error(`Auth Error ${response.status}`); onLogout(); throw new Error(data.error || "Сессия недействительна"); } throw new Error(data.error || `Ошибка ${response.status}`); } return data;
-        } catch (error) { console.error('AuthFetch failed:', error); throw error; }
-     }, [token, onLogout]);
 
-    // Загрузка Стартапов
+            if (!response.ok) {
+                // Обработка ошибок авторизации
+                if (response.status === 401 || response.status === 422) {
+                    console.error(`AuthFetch Error ${response.status} to ${url}, logging out.`);
+                    onLogout(); // Выход из системы
+                    throw new Error(data.error || data.message || data.msg || "Сессия недействительна. Выполнен выход.");
+                }
+                // Другие ошибки сервера
+                throw new Error(data.error || data.message || data.msg || `Ошибка сервера ${response.status}`);
+            }
+            return data; // Возврат данных успешного ответа
+        } catch (error) {
+            console.error('AuthFetch failed:', error); // Логирование любой ошибки
+            // Переброс ошибки дальше
+            throw (error instanceof Error ? error : new Error(error || 'Неизвестная ошибка сети'));
+        }
+    }, [token, onLogout]); // Зависимости: токен и функция выхода
+
+    // Загрузка списка стартапов
     const fetchStartups = useCallback(() => {
-        setLoading(true); setFetchError('');
-        fetch('http://127.0.0.1:5000/startups')
-            .then(r => { if (!r.ok) throw new Error(`Ошибка сети: ${r.status}`); return r.json(); }).then(setStartups)
-            .catch(e => { console.error("Ошибка загрузки:", e); setFetchError(`Не удалось загрузить: ${e.message}`); }).finally(() => setLoading(false));
-    }, []);
+        setLoading(true); // Включаем общий лоадер
+        setFetchError(''); // Сбрасываем ошибку
+        fetch('http://127.0.0.1:5000/startups') // Публичный эндпоинт
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Ошибка сети: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                setStartups(data); // Сохраняем полученные стартапы
+            })
+            .catch(error => {
+                console.error("Ошибка загрузки стартапов:", error);
+                setFetchError(`Не удалось загрузить стартапы: ${error.message}`);
+            })
+            .finally(() => {
+                setLoading(false); // Выключаем общий лоадер
+            });
+    }, []); // Пустой массив зависимостей
 
-    useEffect(() => { fetchStartups(); }, [fetchStartups]);
+    // Загрузка профиля пользователя
+    const fetchUserProfile = useCallback(() => {
+        console.log("[AppContent] Загрузка/Обновление профиля пользователя...");
+        setLoadingProfile(true); // Включаем лоадер профиля
+        authFetch('/profile') // Используем authFetch
+            .then(data => {
+                setUserProfileData(data); // Сохраняем данные профиля
+                console.log("[AppContent] Профиль загружен/обновлен:", data);
+            })
+            .catch(err => {
+                console.error("Ошибка загрузки/обновления профиля в AppContent:", err);
+                // Показываем сообщение об ошибке, но не перезаписываем fetchError от стартапов
+                showMessage(`Не удалось загрузить/обновить данные профиля: ${err.message}`, 'error');
+                setUserProfileData(null); // Сбрасываем профиль при ошибке загрузки
+            })
+            .finally(() => {
+                setLoadingProfile(false); // Выключаем лоадер профиля
+            });
+    }, [authFetch, showMessage]); // Зависит от authFetch и showMessage
 
-    // Добавление Стартапа
+    // Загружаем стартапы и профиль ТОЛЬКО ОДИН РАЗ при монтировании
+    useEffect(() => {
+        fetchStartups();
+        fetchUserProfile();
+    }, []); // <-- ПУСТОЙ массив зависимостей!
+
+    // Обработчик добавления стартапа
     const handleAddStartup = async (startupData) => {
-        console.log("handleAddStartup:", startupData); setLoading(true);
-        try { const data = await authFetch('/startups', { method: 'POST', body: JSON.stringify(startupData) }); showMessage(data.message || 'Добавлено!', 'success'); fetchStartups(); setShowAddStartupForm(false); }
-        catch (error) { showMessage(`Ошибка: ${error.message}`, 'error'); } finally { setLoading(false); }
+        console.log("handleAddStartup вызван с:", startupData);
+        setLoading(true); // Используем общий лоадер
+        try {
+            const data = await authFetch('/startups', {
+                method: 'POST',
+                body: JSON.stringify(startupData)
+            });
+            showMessage(data.message || 'Стартап успешно добавлен!', 'success');
+            fetchStartups(); // Обновляем список
+            setShowAddStartupForm(false); // Скрываем форму
+        } catch (error) {
+            showMessage(`Ошибка добавления стартапа: ${error.message}`, 'error');
+        } finally {
+            setLoading(false);
+        }
      };
 
-    // --- Функции Редактирования Средств ---
+    // Обработчик клика на "Ред. средства"
     const handleEditFundsClick = (startup) => {
-        setEditingStartupId(startup.id);
+        console.log("Начало редактирования средств для:", startup.id);
+        setEditingStartupId(startup.id); // Запоминаем ID
         const initialFunds = {};
-        const currentFunds = startup.funds_raised || {}; // Обработка случая, если funds_raised нет
-        for (const currency in currentFunds) { initialFunds[currency] = String(currentFunds[currency]); }
-        for (const cur of ['ETH', 'BTC', 'USDT']) { if (!(cur in initialFunds)) { initialFunds[cur] = '0'; } }
-        setEditingFunds(initialFunds);
+        const currentFunds = startup.funds_raised || {};
+        for (const currency in currentFunds) {
+            initialFunds[currency] = String(currentFunds[currency]);
+        }
+        for (const cur of ['ETH', 'BTC', 'USDT']) {
+            if (!(cur in initialFunds)) { initialFunds[cur] = '0'; }
+        }
+        setEditingFunds(initialFunds); // Устанавливаем начальные значения для формы
     };
 
+    // Обработчик изменения полей средств
     const handleEditingFundsChange = (currency, value) => {
         const sanitizedValue = value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
         setEditingFunds(prev => ({ ...prev, [currency]: sanitizedValue }));
     };
 
+    // Обработчик сохранения средств
     const handleSaveFunds = async (startupId) => {
-        setUpdatingFunds(true); setMessage('');
-        const fundsToSend = {}; let validationError = null;
+        setUpdatingFunds(true); // Включаем лоадер операции
+        setMessage('');
+        const fundsToSend = {};
+        let validationError = null;
+        // Валидация и преобразование
         for (const currency in editingFunds) {
-            const valueStr = editingFunds[currency].trim(); if (valueStr === '') continue;
+            const valueStr = editingFunds[currency].trim();
+            if (valueStr === '') { fundsToSend[currency] = 0; continue; } // Пустое поле = 0
             try {
                 const amount = parseFloat(valueStr);
                 if (isNaN(amount) || amount < 0) { throw new Error(); }
                 fundsToSend[currency] = amount;
             } catch (e) { validationError = `Некорректное значение "${valueStr}" для ${currency}.`; break; }
         }
+        // Если ошибка валидации
         if (validationError) { showMessage(validationError, 'error'); setUpdatingFunds(false); return; }
 
         console.log(`[AppContent] Сохранение средств для ${startupId}:`, fundsToSend);
+        // Отправка запроса
         try {
             const data = await authFetch(`/startups/${startupId}/funds`, { method: 'PUT', body: JSON.stringify(fundsToSend) });
             showMessage(data.message || 'Средства обновлены!', 'success');
             setEditingStartupId(null); // Выход из режима редактирования
-            // Опционально: обновить только один стартап локально, а не перезагружать все
-             setStartups(prev => prev.map(s => s.id === startupId ? data.startup : s));
-            // fetchStartups(); // Или перезагрузить все
-        } catch (error) { console.error("Ошибка сохранения средств:", error); showMessage(`Ошибка: ${error.message}`, 'error'); }
-        finally { setUpdatingFunds(false); }
+            // Оптимистичное обновление стартапа в локальном состоянии
+            setStartups(prev => prev.map(s =>
+                 s.id === startupId
+                 ? { ...s, funds_raised: data.startup.funds_raised, creator_username: data.startup.creator_username }
+                 : s
+             ));
+        } catch (error) {
+            console.error("Ошибка сохранения средств:", error);
+            showMessage(`Ошибка обновления средств: ${error.message}`, 'error');
+        } finally {
+            setUpdatingFunds(false); // Выключаем лоадер операции
+        }
     };
 
-    const handleCancelEditFunds = () => { setEditingStartupId(null); setEditingFunds({}); };
-    // --- Конец функций Редактирования ---
+    // Обработчик отмены редактирования средств
+    const handleCancelEditFunds = () => {
+        console.log("Отмена редактирования средств");
+        setEditingStartupId(null); // Сбрасываем ID
+        setEditingFunds({}); // Очищаем временные данные
+     };
 
-    // Фильтрация стартапов
+    // Фильтрация стартапов для поиска
     const filteredStartups = startups.filter(startup =>
         startup.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // --- JSX ---
+    // --- JSX Рендеринг ---
     return (
         <div className="app-container">
-            <div className="app-header"> {/* Шапка */}
-                 <h1>YourFuture</h1>
+            {/* Шапка */}
+            <div className="app-header">
+                 <h1>Инвестируйте в Будущее!</h1>
                  <div className="user-info">
                     <span className="user-greeting">Привет, <span>{username}!</span> {isAdmin && '(Админ)'}</span>
                     <button onClick={onLogout} className="logout-button">Выйти</button>
                  </div>
             </div>
-            <div className="tabs-navigation"> {/* Вкладки */}
+
+            {/* Навигация по вкладкам */}
+            <div className="tabs-navigation">
                  <button className={`tab-button ${activeTab === 'startups' ? 'active' : ''}`} onClick={() => setActiveTab('startups')}> Стартапы </button>
                  <button className={`tab-button ${activeTab === 'meetups' ? 'active' : ''}`} onClick={() => setActiveTab('meetups')}> Митапы </button>
                  <button className={`tab-button ${activeTab === 'vacancies' ? 'active' : ''}`} onClick={() => setActiveTab('vacancies')}> Вакансии </button>
+                 <button className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`} onClick={() => setActiveTab('profile')}> Личный кабинет </button>
             </div>
-            {fetchError && <p className="message error">{fetchError}</p>}
-            {message && <p className={`message ${messageType}`}>{message}</p>}
 
+             {/* Сообщения об ошибках и успехах */}
+             {fetchError && <p className="message error">{fetchError}</p>}
+             {message && <p className={`message ${messageType}`}>{message}</p>}
+             {/* Лоадер во время начальной загрузки стартапов или профиля */}
+             {(loading || (loadingProfile && !userProfileData)) && <p>Загрузка данных...</p>}
+
+            {/* Область контента вкладок */}
             <div className="tab-content-area">
                 {/* Вкладка Стартапы */}
                 {activeTab === 'startups' && (
                     <div className="startups-content">
-                         <div className="search-container"> {/* Поиск */}
-                             <input type="text" placeholder="Поиск..." className="search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={loading || updatingFunds} />
+                         <div className="search-container">
+                             <input type="text" placeholder="Поиск по названию стартапа..." className="search-input" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} disabled={loading || updatingFunds} />
                          </div>
-                         {/* Кнопка/Форма Добавить */}
                          {!showAddStartupForm && (<button onClick={() => setShowAddStartupForm(true)} className="add-button add-startup-button" disabled={loading || updatingFunds}> + Добавить стартап </button>)}
                          {showAddStartupForm && (<AddStartupForm onAdd={handleAddStartup} onCancel={() => setShowAddStartupForm(false)} isLoading={loading || updatingFunds} />)}
-                         {/* Список */}
                          <div className="startup-list card-list">
-                             {loading && startups.length === 0 && <p>Загрузка...</p>}
-                             {!loading && startups.length === 0 && !fetchError && <p>Стартапов нет.</p>}
-                             {!loading && startups.length > 0 && filteredStartups.length === 0 && (<p className="no-results-message">Ничего не найдено.</p>)}
-                             {/* Передача пропсов для редактирования */}
+                             {loading && startups.length === 0 && <p>Загрузка стартапов...</p>}
+                             {!loading && startups.length === 0 && !fetchError && <p>Стартапов пока нет.</p>}
+                             {!loading && startups.length > 0 && filteredStartups.length === 0 && (<p className="no-results-message">По вашему запросу "{searchQuery}" ничего не найдено.</p>)}
                              {filteredStartups.map((startup) => (
                                  <StartupCard
                                      key={startup.id}
@@ -182,21 +280,107 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
                     </div>
                 )}
                 {/* Вкладка Митапы */}
-                {activeTab === 'meetups' && ( <MeetupsTabContent token={token} isAdmin={isAdmin} authFetch={authFetch} /> )}
+                {activeTab === 'meetups' && (
+                    <MeetupsTabContent
+                        token={token}
+                        isAdmin={isAdmin}
+                        authFetch={authFetch}
+                    />
+                 )}
                 {/* Вкладка Вакансии */}
-                {activeTab === 'vacancies' && ( <VacanciesTabContent token={token} username={username} userId={userId} userRole={userRole} authFetch={authFetch} allStartups={startups} /> )}
+                {activeTab === 'vacancies' && (
+                    <VacanciesTabContent
+                        token={token}
+                        username={username}
+                        userId={userId}
+                        userRole={userRole}
+                        authFetch={authFetch}
+                        allStartups={startups}
+                        showMessage={showMessage} // Передаем showMessage
+                        userProfileData={userProfileData} // Передаем загруженные данные профиля
+                    />
+                 )}
+                {/* Вкладка Личный кабинет */}
+                {activeTab === 'profile' && (
+                    <ProfileTabContent
+                        token={token}
+                        userId={userId}
+                        authFetch={authFetch}
+                        showMessage={showMessage} // Передаем showMessage
+                        onProfileUpdate={fetchUserProfile} // Передаем колбэк для обновления профиля в AppContent
+                    />
+                 )}
             </div>
         </div>
     );
 }
 
+
 // --- Компонент верхнего уровня App ---
-function App() { /* ... код компонента App БЕЗ ИЗМЕНЕНИЙ ... */
-    const [token, setToken] = useState(localStorage.getItem('jwtToken')); const [username, setUsername] = useState(localStorage.getItem('username')); const [userRole, setUserRole] = useState(localStorage.getItem('userRole')); const [userId, setUserId] = useState(localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId'), 10) : null);
-    const handleLoginSuccess = (newToken, loggedInUsername, loggedInUserRole) => { localStorage.setItem('jwtToken', newToken); localStorage.setItem('username', loggedInUsername); localStorage.setItem('userRole', loggedInUserRole); try { const payload = JSON.parse(atob(newToken.split('.')[1])); const loggedInUserId = payload.sub; if (loggedInUserId) { localStorage.setItem('userId', loggedInUserId); setUserId(parseInt(loggedInUserId, 10)); } else { handleLogout(); return; } } catch (error) { handleLogout(); return; } setToken(newToken); setUsername(loggedInUsername); setUserRole(loggedInUserRole); };
-    const handleLogout = useCallback(() => { localStorage.clear(); setToken(null); setUsername(null); setUserRole(null); setUserId(null); }, []);
-    useEffect(() => { const storedToken = localStorage.getItem('jwtToken'); const storedUsername = localStorage.getItem('username'); const storedUserRole = localStorage.getItem('userRole'); const storedUserIdStr = localStorage.getItem('userId'); if (storedToken && storedUsername && storedUserRole && storedUserIdStr) { setToken(storedToken); setUsername(storedUsername); setUserRole(storedUserRole); setUserId(parseInt(storedUserIdStr, 10)); } else if (token || username || userRole || userId !== null) { handleLogout(); } }, [handleLogout, token, username, userRole, userId]);
-    return ( <div> {token && username && userRole && userId !== null ? (<AppContent token={token} username={username} userId={userId} userRole={userRole} onLogout={handleLogout} /> ) : ( <Auth onLoginSuccess={handleLoginSuccess} /> )} </div> );
+function App() {
+    const [token, setToken] = useState(localStorage.getItem('jwtToken'));
+    const [username, setUsername] = useState(localStorage.getItem('username'));
+    const [userRole, setUserRole] = useState(localStorage.getItem('userRole'));
+    const [userId, setUserId] = useState(localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId'), 10) : null);
+
+    // Обработчик успешного входа
+    const handleLoginSuccess = (newToken, loggedInUsername, loggedInUserRole) => {
+        localStorage.setItem('jwtToken', newToken);
+        localStorage.setItem('username', loggedInUsername);
+        localStorage.setItem('userRole', loggedInUserRole);
+        try {
+            const payload = JSON.parse(atob(newToken.split('.')[1]));
+            const loggedInUserId = payload.sub;
+            if (loggedInUserId) {
+                 localStorage.setItem('userId', loggedInUserId);
+                 setUserId(parseInt(loggedInUserId, 10));
+            } else {
+                console.error("Не удалось извлечь ID пользователя (sub) из токена.");
+                 handleLogout(); return;
+            }
+        } catch (error) {
+             console.error("Ошибка декодирования токена или извлечения ID:", error);
+             handleLogout(); return;
+        }
+        setToken(newToken);
+        setUsername(loggedInUsername);
+        setUserRole(loggedInUserRole);
+    };
+
+    // Обработчик выхода
+    const handleLogout = useCallback(() => {
+        localStorage.clear();
+        setToken(null); setUsername(null); setUserRole(null); setUserId(null);
+    }, []);
+
+    // Эффект для проверки данных в localStorage при загрузке
+    useEffect(() => {
+        const storedToken = localStorage.getItem('jwtToken');
+        const storedUsername = localStorage.getItem('username');
+        const storedUserRole = localStorage.getItem('userRole');
+        const storedUserIdStr = localStorage.getItem('userId');
+
+        if (storedToken && storedUsername && storedUserRole && storedUserIdStr) {
+            setToken(storedToken); setUsername(storedUsername);
+            setUserRole(storedUserRole); setUserId(parseInt(storedUserIdStr, 10));
+        } else if (token || username || userRole || userId !== null) {
+             handleLogout();
+        }
+    }, [handleLogout, token, username, userRole, userId]);
+
+    // Рендер приложения
+    return (
+        <div>
+            {token && username && userRole && userId !== null ? (
+                <AppContent
+                    token={token} username={username} userId={userId}
+                    userRole={userRole} onLogout={handleLogout}
+                />
+            ) : (
+                <Auth onLoginSuccess={handleLoginSuccess} />
+            )}
+        </div>
+    );
 }
 
 export default App;
