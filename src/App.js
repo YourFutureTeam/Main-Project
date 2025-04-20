@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 // Импорты компонентов
 import StartupCard from './StartupCard';
+import LandingPage from './LandingPage';
 import { Auth } from './Auth';
 import MeetupsTabContent from './MeetupsTabContent';
 import VacanciesTabContent from './VacanciesTabContent';
@@ -172,13 +173,20 @@ function App() {
     };
     const handleLogout = useCallback(() => { console.log("Logout..."); localStorage.clear(); setToken(null); setUsername(null); setUserRole(null); setUserId(null); }, []);
 
-    // Рендеринг Auth или AppContent СРАЗУ на основе token
+    // Рендеринг: LandingPage или AppContent
     return (
         <div>
-            {token && userId !== null && username && userRole ? ( // Проверяем все данные
-                <AppContent token={token} username={username} userId={userId} userRole={userRole} onLogout={handleLogout} />
-            ) : (
-                <Auth onLoginSuccess={handleLoginSuccess} />
+            {token && userId !== null && username && userRole ? ( // Если все данные есть
+                <AppContent
+                    token={token}
+                    username={username}
+                    userId={userId}
+                    userRole={userRole}
+                    onLogout={handleLogout}
+                />
+            ) : ( // Иначе - приветственная страница со входом/регистрацией
+                // ---> ИСПОЛЬЗУЕМ LandingPage ВМЕСТО Auth <---
+                <LandingPage onLoginSuccess={handleLoginSuccess} />
             )}
         </div>
     );
