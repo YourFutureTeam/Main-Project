@@ -490,6 +490,7 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
                         token={token}
                         userId={userId}
                         authFetch={authFetch}
+                        isAdmin={isAdmin} // <--- ВОТ ЭТА СТРОКА БЫЛА ПРОПУЩЕНА! ДОБАВЬ ЕЕ!
                         showMessage={showMessage}
                         onProfileUpdate={fetchUserProfile} // Функция для обновления данных после сохранения
                         isUpdatingParent={updatingOperation} // Передаем флаг лоадера, если нужно

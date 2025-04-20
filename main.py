@@ -75,6 +75,16 @@ vacancies = {
     2: {"id": 2, "startup_id": 4, "title": "Frontend Dev (Ожидает)", "description": "React...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 2},
     3: {"id": 3, "startup_id": 1, "title": "ML Engineer (Ожидает)", "description": "...", "salary": "...", "requirements": "...", "applicants": [], "status": "pending", "rejection_reason": None, "creator_user_id": 0},
 }
+
+# ---> НОВОЕ ХРАНИЛИЩЕ УВЕДОМЛЕНИЙ <---
+user_notifications = {
+    1: {"id": 1, "user_id": 1, "admin_id": 0, "message": "Добро пожаловать на платформу! Пожалуйста, заполните ваш профиль.", "timestamp": "2025-04-20T10:00:00", "is_read": False},
+    2: {"id": 2, "user_id": 1, "admin_id": 0, "message": "Ваш стартап 'ЭкоСтарт' требует дополнительной информации.", "timestamp": "2025-04-21T11:30:00", "is_read": False},
+    3: {"id": 3, "user_id": 2, "admin_id": 0, "message": "Напоминаем о необходимости провести квартальный митап по стартапу 'Финтех'.", "timestamp": "2025-04-21T12:00:00", "is_read": True}, # Пример прочитанного
+}
+next_notification_id = 4
+# ---> КОНЕЦ НОВОГО ХРАНИЛИЩА <---
+
 next_startup_id = 5
 next_user_id = 1
 next_meetup_id = 4
@@ -256,6 +266,36 @@ def update_profile():
     }
     return jsonify({"message": "Профиль обновлен", "profile": updated_profile_data})
 
+# --- НОВЫЙ ЭНДПОИНТ: GET /profile/notifications ---
+@app.route("/profile/notifications", methods=["GET"])
+@jwt_required()
+def get_my_notifications():
+    """Возвращает список уведомлений для текущего пользователя."""
+    identity_str = get_jwt_identity()
+    try:
+        current_user_id = int(identity_str)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Неверный ID пользователя в токене"}), 422
+
+    my_notifications = []
+    for notification_data in user_notifications.values():
+        if notification_data.get("user_id") == current_user_id:
+            # Можно добавить имя админа-отправителя, если нужно
+            # admin_id = notification_data.get("admin_id")
+            # admin_username = get_username_by_id(admin_id)
+            # notification_data_with_sender = {**notification_data, "admin_username": admin_username}
+            # my_notifications.append(notification_data_with_sender)
+            my_notifications.append(notification_data)
+
+    # Сортируем по дате, самые новые сверху
+    sorted_notifications = sorted(
+        my_notifications,
+        key=lambda n: n.get("timestamp", ""),
+        reverse=True
+    )
+    return jsonify(sorted_notifications)
+# --- КОНЕЦ НОВОГО ЭНДПОИНТА ---
+
 # 12. Startups Endpoints
 @app.route("/startups", methods=["GET"])
 @jwt_required(optional=True)
@@ -371,6 +411,64 @@ def add_startup():
         "creator_resume_link": resume_link.strip()
     }
     return jsonify({"message": "На рассмотрении", "startup": new_startup_data_response}), 201
+
+@app.route('/users/<int:user_id>/notifications', methods=['POST'])
+@admin_required()
+def send_user_notification(user_id):
+    """Отправляет уведомление конкретному пользователю (только админ)."""
+    global next_notification_id
+    identity_str = get_jwt_identity()
+    try:
+        admin_user_id = int(identity_str) # ID админа, который отправляет
+    except (ValueError, TypeError):
+        return jsonify({"error": "Неверный ID админа в токене"}), 422
+
+    # Проверяем, существует ли пользователь-получатель
+    target_user_data = get_user_data_by_id(user_id)
+    if not target_user_data:
+        return jsonify({'error': 'Пользователь-получатель не найден'}), 404
+
+    data = request.json
+    message_text = data.get("message")
+
+    if not message_text or not isinstance(message_text, str) or not message_text.strip():
+        return jsonify({'error': 'Текст сообщения не может быть пустым'}), 400
+
+    # Создаем уведомление
+    new_id = next_notification_id
+    new_notification = {
+        "id": new_id,
+        "user_id": user_id, # Кому
+        "admin_id": admin_user_id, # От кого
+        "message": message_text.strip(),
+        "timestamp": datetime.now(timezone.utc).isoformat(timespec='seconds'), # ISO формат 
+        "is_read": False
+    }
+    user_notifications[new_id] = new_notification
+    next_notification_id += 1
+
+    print(f"Admin {admin_user_id} sent notification {new_id} to user {user_id}")
+
+    return jsonify({
+        "message": f"Уведомление отправлено пользователю {target_user_data.get('username')}",
+        "notification": new_notification
+    }), 201
+# --- КОНЕЦ НОВОГО ЭНДПОИНТА ---
+
+@app.route("/users", methods=["GET"])
+@admin_required()
+def get_all_users():
+    """Возвращает список всех пользователей (ID и username) для админа."""
+    user_list = []
+    for user_id, user_data in users.items():
+        user_list.append({
+            "id": user_id,
+            "username": user_data.get("username")
+            # Можно добавить и другие поля, если нужно
+        })
+    # Сортируем по ID
+    sorted_users = sorted(user_list, key=lambda u: u.get("id", 0))
+    return jsonify(sorted_users)
 
 # --- Вспомогательная функция для сборки ответа стартапа ---
 def _get_full_startup_response(startup_data):

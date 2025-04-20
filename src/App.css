@@ -2312,3 +2312,161 @@ input:focus, textarea:focus, select:focus {
 .modal-actions .btn {
   padding: 10px 20px; /* Размер кнопок */
 }
+
+/* src/App.css */
+
+/* ... (все твои предыдущие стили) ... */
+
+/* --- Стили для Личного Кабинета (ProfileTabContent) --- */
+
+.profile-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(160, 140, 200, 0.15); /* Мягкая лавандовая тень */
+}
+
+.profile-section h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  font-size: 1.2em;
+  color: #4a4a4a;
+}
+
+.profile-form .form-field {
+  margin-bottom: 15px;
+}
+.profile-form label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #555;
+}
+.profile-form input[type="text"],
+.profile-form input[type="url"] {
+  width: 100%;
+  max-width: 450px; /* Ограничим ширину полей */
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+  background-color: #fdfdfd; /* Чуть другой фон для полей */
+}
+
+.profile-display p {
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+.profile-display strong {
+  color: #555;
+  margin-right: 8px;
+}
+.profile-display a {
+    color: #007bff;
+    text-decoration: none;
+    word-break: break-all; /* Перенос длинных ссылок */
+}
+.profile-display a:hover {
+    text-decoration: underline;
+}
+
+.btn-edit-profile {
+    margin-top: 15px;
+}
+
+/* --- Стили для Секции Уведомлений --- */
+
+.notification-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.notification-item {
+    background-color: #f8f9fa; /* Светлый фон для уведомления */
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    transition: background-color 0.2s ease;
+}
+
+/* Стиль для непрочитанных уведомлений (если нужно) */
+.notification-item.unread {
+    background-color: #fff9e6; /* Легкий желтоватый фон */
+    border-left: 4px solid #ffc107; /* Желтая полоска слева */
+}
+.notification-item.read {
+   opacity: 0.8; /* Можно сделать прочитанные чуть бледнее */
+}
+
+.notification-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.notification-timestamp {
+    font-size: 0.8em;
+    color: #6c757d; /* Серый цвет для даты */
+}
+
+.notification-message {
+    margin: 0;
+    line-height: 1.5;
+    color: #495057; /* Цвет текста сообщения */
+}
+
+/* src/App.css */
+
+/* ... (все твои предыдущие стили) ... */
+
+/* --- Стили для формы отправки уведомлений админом --- */
+
+.admin-send-notification {
+  background-color: #e9ecef; /* Слегка выделим фон админской секции */
+  border: 1px solid #dee2e6;
+}
+
+.admin-send-notification h3 {
+  color: #495057;
+}
+
+.admin-send-notification .form-field {
+  margin-bottom: 15px;
+}
+
+.admin-send-notification label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #343a40;
+}
+
+.admin-send-notification select,
+.admin-send-notification textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-sizing: border-box;
+  background-color: #fff; /* Белый фон для полей */
+}
+
+.admin-send-notification select {
+  max-width: 400px; /* Ограничим ширину селекта */
+}
+
+.admin-send-notification textarea {
+  min-height: 80px; /* Минимальная высота текстового поля */
+  resize: vertical; /* Разрешаем менять высоту */
+}
+
+.admin-send-notification .form-buttons {
+  margin-top: 15px;
+  text-align: left; /* Кнопка слева */
+}
