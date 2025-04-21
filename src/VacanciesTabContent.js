@@ -1,37 +1,47 @@
-// src/VacanciesTabContent.js (ПОЛНЫЙ КОД)
+// src/VacanciesTabContent.js (ПОЛНЫЙ КОД - Восстановлены ВСЕ функции и передача пропсов)
 
 import React, { useState, useEffect, useCallback } from 'react';
-// Возможно, понадобится форма добавления, если будешь ее делать
-// import AddVacancyForm from './AddVacancyForm';
+// --- ИМПОРТЫ ---
+import AddVacancyForm from './AddVacancyForm'; // Импортируем НАСТОЯЩУЮ форму
+import VacancyCard from './VacancyCard';       // Импортируем карточку вакансии
+import './App.css';                           // Импортируем стили
 
 function VacanciesTabContent({
     token,
-    username, // Может понадобиться для отображения создателя, если нужно
+    username, // Убрали, т.к. есть в userProfileData
     userId,
-    userRole,
+    userRole, // Убрали, т.к. есть isAdmin
     isAdmin,
     authFetch,
-    allStartups, // Может понадобиться для формы добавления
+    allStartups, // ПОЛНЫЙ список стартапов
     showMessage,
-    userProfileData // Может понадобиться для проверки профиля перед действиями
+    userProfileData, // Профиль текущего пользователя
+    isUpdatingParent
 }) {
+    // --- Состояния ---
     const [vacancies, setVacancies] = useState([]);
     const [loadingVacancies, setLoadingVacancies] = useState(true);
     const [fetchError, setFetchError] = useState('');
-    const [showAddForm, setShowAddForm] = useState(false); // Состояние для показа формы добавления
-    const [updating, setUpdating] = useState(false); // Общий флаг для операций (отклик, модерация)
-    // Можно добавить состояние для фильтров, если нужно
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [updating, setUpdating] = useState(false); // Лоадер для ДЕЙСТВИЙ В ЭТОМ КОМПОНЕНТЕ
+    const [showOnlyMyVacancies, setShowOnlyMyVacancies] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
-    // Функция загрузки вакансий
+    // --- Функции ---
+
+    // Загрузка вакансий (с учетом фильтра) - ВОССТАНОВЛЕНА
     const fetchVacancies = useCallback(() => {
-        console.log("Fetching vacancies...");
+        console.log("Fetching vacancies, filter_by_creator:", showOnlyMyVacancies);
         setLoadingVacancies(true);
         setFetchError('');
-        authFetch('/vacancies') // Бэкенд уже фильтрует held для не-админов
+        const url = `/vacancies${showOnlyMyVacancies ? '?filter_by_creator=true' : ''}`;
+        authFetch(url)
             .then(data => {
-                if (data) {
-                    console.log("Vacancies received:", data);
+                if (data && Array.isArray(data)) {
                     setVacancies(data);
+                } else {
+                    console.warn("Received non-array or null data for vacancies:", data);
+                    setVacancies([]);
                 }
             })
             .catch(err => {
@@ -41,33 +51,29 @@ function VacanciesTabContent({
             .finally(() => {
                 setLoadingVacancies(false);
             });
-    }, [authFetch]);
+    }, [authFetch, showOnlyMyVacancies]);
 
-    // Загружаем вакансии при монтировании или при изменении зависимостей
+    // Загрузка при монтировании и смене фильтра - ВОССТАНОВЛЕНА
     useEffect(() => {
-        // Загружаем, только если профиль пользователя загружен (если это важно)
         if (userProfileData) {
-            fetchVacancies();
+             fetchVacancies();
+        } else {
+            setLoadingVacancies(false);
+            console.warn("VacanciesTabContent: Cannot fetch, userProfileData missing.");
         }
-    }, [fetchVacancies, userProfileData]);
+    }, [fetchVacancies, userProfileData, showOnlyMyVacancies]);
 
-    // Обработчик отклика на вакансию
+    // Обработчик отклика - ВОССТАНОВЛЕН
     const handleApply = async (vacancyId) => {
-         // Проверка профиля перед откликом
-         if (!userProfileData?.telegram || !userProfileData?.resume_link) {
-            showMessage('Пожалуйста, заполните Telegram и ссылку на резюме в Личном кабинете перед откликом.', 'error');
-            return;
-         }
-
-        console.log(`Applying for vacancy ${vacancyId}`);
-        setUpdating(true);
+        if (!userProfileData?.telegram || !userProfileData?.resume_link) {
+            showMessage('Заполните Telegram и резюме в ЛК.', 'error'); return;
+        }
+        setUpdating(true); // Используем локальный лоадер
         try {
-            // Бэкенд проверит статус вакансии и стартапа
             const data = await authFetch(`/vacancies/${vacancyId}/apply`, { method: 'POST' });
             if (data) {
                 showMessage(data.message || 'Отклик отправлен!', data.message?.includes("Уже") ? 'info' : 'success');
-                // Опционально: обновить состояние вакансии или перезагрузить список
-                // fetchVacancies(); // Перезагрузка может быть излишней, если не меняется статус
+                fetchVacancies(); // Обновляем список, чтобы видеть изменения (например, счетчик)
             }
         } catch (err) {
             showMessage(`Ошибка отклика: ${err.message}`, 'error');
@@ -76,115 +82,165 @@ function VacanciesTabContent({
         }
     };
 
-     // --- Рендеринг компонента ---
+    // Обработчик добавления вакансии - ВОССТАНОВЛЕН
+    const handleAddVacancy = async (vacancyData) => {
+        console.log("Adding new vacancy:", vacancyData);
+        setUpdating(true); // Используем локальный лоадер
+        try {
+            const data = await authFetch('/vacancies', { method: 'POST', body: JSON.stringify(vacancyData) });
+            if (data) {
+                showMessage(data.message || 'Вакансия отправлена на рассмотрение!', 'success');
+                setShowAddForm(false);
+                fetchVacancies();
+            }
+        } catch (error) {
+            if (error.message) { showMessage(`Ошибка добавления вакансии: ${error.message}`, 'error'); }
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    // Обработчик отмены добавления
+    const handleCancelAddVacancy = () => {
+        setShowAddForm(false);
+    };
+
+    // --- ОБРАБОТЧИКИ МОДЕРАЦИИ (для передачи в VacancyCard) ---
+    const handleApproveVacancy = async (vacancyId) => {
+        console.log("Approving vacancy:", vacancyId);
+        setUpdating(true); // Используем локальный лоадер
+        try {
+            const data = await authFetch(`/vacancies/${vacancyId}/approve`, { method: 'PUT' });
+            if (data) {
+                showMessage(data.message || 'Вакансия одобрена!', 'success');
+                fetchVacancies(); // Обновляем список для смены статуса
+            }
+        } catch (error) {
+            if (error.message) showMessage(`Ошибка одобрения вакансии: ${error.message}`, 'error');
+        } finally {
+            setUpdating(false);
+        }
+    };
+
+    const handleRejectVacancy = async (vacancyId, reason) => {
+        console.log("Rejecting vacancy:", vacancyId, "Reason:", reason);
+         if (!reason || !reason.trim()) {
+             // Ошибка обрабатывается в VacancyCard через window.prompt, здесь можно не дублировать
+             // showMessage("Необходимо указать причину отклонения.", "error");
+             return; // Прерываем, если причина не была введена
+         }
+        setUpdating(true); // Используем локальный лоадер
+        try {
+            const data = await authFetch(`/vacancies/${vacancyId}/reject`, {
+                method: 'PUT',
+                body: JSON.stringify({ reason: reason.trim() })
+            });
+            if (data) {
+                showMessage(data.message || 'Вакансия отклонена.', 'info');
+                fetchVacancies(); // Обновляем список для смены статуса
+            }
+        } catch (error) {
+            if (error.message) showMessage(`Ошибка отклонения вакансии: ${error.message}`, 'error');
+        } finally {
+            setUpdating(false);
+        }
+    };
+    // --- КОНЕЦ ОБРАБОТЧИКОВ МОДЕРАЦИИ ---
+
+    // --- ФИЛЬТРАЦИЯ СТАРТАПОВ ДЛЯ ФОРМЫ ---
+    const availableStartupsForForm = (allStartups || [])
+        .filter(startup =>
+            startup.status === 'approved' && (isAdmin || startup.creator_user_id === userId)
+        );
+    
+    const filteredVacancies = vacancies.filter(vacancy =>
+        vacancy.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    // --- Рендеринг компонента ---
     return (
-        <div className="vacancies-content tab-pane"> {/* Добавлен класс tab-pane для консистентности */}
-            <h2>Доступные вакансии</h2>
-
+        // --- НАЧАЛО ПОЛНОГО JSX ДЛЯ return ---
+        <div className="vacancies-content tab-pane">
             {fetchError && <p className="message error">{fetchError}</p>}
+            {/* Показываем общий лоадер из App ИЛИ локальный лоадер */}
+            {(updating || isUpdatingParent) && <div className="loading-indicator"><p>Выполняется операция...</p></div>}
+            {/* --- КОНТЕЙНЕР С ФИЛЬТРОМ И КНОПКОЙ ДОБАВЛЕНИЯ --- */}
+            <div className="search-and-filter-container">
+                <div className="search-container">
+                    <input
+                        type="text"
+                        placeholder="Поиск по названию вакансии..."
+                        className="search-input"
+                        value={searchQuery} // <-- Используем состояние
+                        onChange={(e) => setSearchQuery(e.target.value)} // <-- Обновляем состояние
+                        disabled={loadingVacancies || updating || isUpdatingParent}
+                    />
+                 </div>
+                 <div className="filter-container">
+                     <input
+                         type="checkbox"
+                         id="showOnlyMyVacancies"
+                         checked={showOnlyMyVacancies}
+                         onChange={(e) => setShowOnlyMyVacancies(e.target.checked)}
+                         disabled={loadingVacancies || updating || isUpdatingParent}
+                     />
+                     <label htmlFor="showOnlyMyVacancies">Только мои вакансии</label>
+                 </div>
+            </div>
 
-            {/* Можно добавить кнопку "Добавить вакансию", если нужно */}
-            {/* {isAdmin && !showAddForm && (
-                <button onClick={() => setShowAddForm(true)} className="add-button">
+            {/* Кнопка Добавить Вакансию */}
+            {!showAddForm && (availableStartupsForForm.length > 0 || isAdmin) && (
+                <button
+                    onClick={() => setShowAddForm(true)}
+                    className="add-button add-vacancy-button"
+                    disabled={loadingVacancies || updating || isUpdatingParent}
+                >
                     + Добавить вакансию
                 </button>
             )}
+            {!showAddForm && !isAdmin && availableStartupsForForm.length === 0 && !loadingVacancies && (
+                <p className="info-message">Чтобы добавить вакансию, у вас должен быть хотя бы один одобренный стартап.</p>
+            )}
+
+             {/* Форма добавления вакансии */}
             {showAddForm && (
                 <AddVacancyForm
-                    // Пропсы для формы
-                    onAdd={handleAddVacancy} // Нужно будет создать эту функцию
-                    onCancel={() => setShowAddForm(false)}
-                    isLoading={updating}
-                    startups={allStartups} // Передаем список стартапов
+                    onAdd={handleAddVacancy}
+                    onCancel={handleCancelAddVacancy}
+                    // Используем локальный лоадер ИЛИ лоадер родителя
+                    isLoading={updating || isUpdatingParent}
+                    availableStartups={availableStartupsForForm}
                 />
-            )} */}
+            )}
 
+            {/* Список вакансий */}
             <div className="vacancy-list card-list">
                 {loadingVacancies && <p>Загрузка вакансий...</p>}
                 {!loadingVacancies && vacancies.length === 0 && !fetchError && (
-                    <p>Сейчас нет активных вакансий.</p>
+                    <p>Нет доступных вакансий{showOnlyMyVacancies ? ', созданных вами' : ''}.</p>
                 )}
-
-                {/* Отображение списка вакансий */}
-                {vacancies.map(vacancy => (
-                    <div
-                        key={vacancy.id}
-                        // Добавляем класс 'held' если вакансия приостановлена
-                        className={`card vacancy-card ${vacancy.is_effectively_held ? 'held' : ''}`}
-                        // Анимация появления (если .card уже имеет ее в App.css)
-                    >
-                        <div className="card-header">
-                            <div className="vacancy-title-status">
-                                <h4 className="card-title">{vacancy.title}</h4>
-                                {/* Отображение статуса для админа/создателя, если не approved */}
-                                {(isAdmin || userId === vacancy.creator_user_id) && vacancy.status !== 'approved' && (
-                                    <span className={`status-badge status-${vacancy.status}`}>
-                                        {vacancy.status === 'pending' ? 'Рассмотрение' : 'Отклонена'}
-                                    </span>
-                                )}
-                                {/* Индикатор приостановки для админа */}
-                                {isAdmin && vacancy.is_effectively_held && (
-                                    <span className="status-badge status-held" title="Стартап приостановлен">⏸️ Пауза</span>
-                                )}
-                            </div>
-                            {/* Информация о стартапе */}
-                            <div className="vacancy-startup-info">
-                                В стартап: <span className="startup-name">{vacancy.startup_name || 'Неизвестно'}</span>
-                            </div>
-                        </div>
-                        <div className="card-body">
-                            {/* Добавляем <p> для лучшей структуры */}
-                            <p><strong>Описание:</strong> {vacancy.description}</p>
-                            <p><strong>Требования:</strong> {vacancy.requirements}</p>
-                            {vacancy.salary && vacancy.salary !== "N/A" && (
-                                <p><strong>Зарплата:</strong> {vacancy.salary}</p>
-                            )}
-                             {/* Причина отклонения для создателя/админа */}
-                             {(isAdmin || userId === vacancy.creator_user_id) && vacancy.status === 'rejected' && vacancy.rejection_reason && (
-                                 <p className="rejection-reason-vacancy"><strong>Причина отклонения:</strong> {vacancy.rejection_reason}</p>
-                             )}
-                        </div>
-                        <div className="card-actions">
-                            {/* Можно добавить кнопки модерации для админа */}
-                            {/* {isAdmin && vacancy.status === 'pending' && (
-                                <div className="admin-actions">
-                                     <button onClick={() => handleApproveVacancy(vacancy.id)} className="button-approve small" disabled={updating}>Одобрить</button>
-                                     <button onClick={() => handleRejectVacancy(vacancy.id)} className="button-reject small" disabled={updating}>Отклонить</button>
-                                </div>
-                            )} */}
-
-                            {/* Кнопка "Откликнуться" для обычных пользователей */}
-                            {!isAdmin && vacancy.status === 'approved' && (
-                                <button
-                                    onClick={() => handleApply(vacancy.id)}
-                                    className="button-apply"
-                                    // Блокируем, если идет операция ИЛИ вакансия/стартап приостановлены
-                                    disabled={updating || vacancy.is_effectively_held}
-                                    title={vacancy.is_effectively_held ? "Отклик невозможен (стартап приостановлен)" : "Откликнуться на вакансию"}
-                                >
-                                    {vacancy.is_effectively_held ? 'Недоступно' : 'Откликнуться'}
-                                </button>
-                            )}
-
-                             {/* Счетчик откликов для админа или создателя СТАРТАПА */}
-                             {(isAdmin || userId === vacancy.startup_creator_id) && vacancy.applicant_count !== undefined && (
-                                 <span className="applicant-count">
-                                     Откликов: {vacancy.applicant_count}
-                                     {/* Здесь можно добавить ссылку/кнопку для просмотра откликов */}
-                                 </span>
-                             )}
-                        </div>
-                    </div>
-                ))}
+                {!loadingVacancies && filteredVacancies.length > 0 && (
+                    filteredVacancies.map(vacancy => (
+                        <VacancyCard
+                            key={vacancy.id}
+                            vacancy={vacancy}
+                            currentUserId={userId}
+                            isAdmin={isAdmin}
+                            userProfile={userProfileData}
+                            onApply={handleApply}
+                            // ---> ПЕРЕДАЕМ ПРОПСЫ МОДЕРАЦИИ <---
+                            onApprove={handleApproveVacancy}
+                            onReject={handleRejectVacancy}
+                            // ---------------------------------
+                            // Передаем флаг блокировки (локальный ИЛИ родительский)
+                            isProcessing={updating || isUpdatingParent}
+                        />
+                    ))
+                )}
             </div>
         </div>
+         // --- КОНЕЦ ПОЛНОГО JSX ДЛЯ return ---
     );
 }
 
-// --- (Предполагается, что есть стили для .vacancy-card, .held, .status-badge, .button-apply, .applicant-count в App.css) ---
-
-// --- (Предполагается, что компоненты MeetupsTabContent, ProfileTabContent, AddVacancyForm существуют или будут созданы) ---
-
-// --- Экспорт компонента ---
-// Если это файл src/VacanciesTabContent.js, то:
 export default VacanciesTabContent;
