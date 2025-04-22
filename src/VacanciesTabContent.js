@@ -228,6 +228,7 @@ function VacanciesTabContent({
                             isAdmin={isAdmin}
                             userProfile={userProfileData}
                             onApply={handleApply}
+                            isCreator={vacancy.creator_user_id === userId}
                             // ---> ПЕРЕДАЕМ ПРОПСЫ МОДЕРАЦИИ <---
                             onApprove={handleApproveVacancy}
                             onReject={handleRejectVacancy}

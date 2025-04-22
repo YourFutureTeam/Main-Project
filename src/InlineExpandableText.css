@@ -1,0 +1,54 @@
+/* src/InlineExpandableText.css */
+
+.inline-expandable-text {
+  position: relative; /* Для позиционирования кнопки, если нужно */
+  display: block; /* По умолчанию блочный элемент */
+  max-width: 100%;
+  /* white-space: pre-line; */ /* Позволяет сохранить переносы строк из текста */
+                             /* Убрано, т.к. может конфликтовать с line-clamp. */
+                             /* Лучше форматировать текст переносами \n при передаче. */
+}
+
+.iet-content {
+  /* Плавный переход высоты при раскрытии/сворачивании - не очень хорошо работает с line-clamp */
+  /* transition: max-height 0.2s ease-out; */
+  /* max-height устанавливается при раскрытии, если нужно */
+  word-break: break-word; /* Перенос длинных слов */
+  line-height: 1.4;       /* Установите нужную высоту строки */
+  /* Важно: pre-wrap сохраняет пробелы и переносы, может влиять на расчет строк */
+  white-space: pre-wrap;
+  /* Убедимся, что нет других стилей, переопределяющих overflow или display */
+  overflow: hidden; /* Важно для line-clamp, но применяется через класс ниже */
+  display: block;   /* Убедимся, что это блок */
+}
+
+.iet-content.iet-truncated {
+  /* Стили, необходимые для -webkit-line-clamp */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden; /* Обязательно для line-clamp */
+  text-overflow: ellipsis; /* Добавляет троеточие (хотя line-clamp обычно сам это делает) */
+  /* -webkit-line-clamp устанавливается через inline style в компоненте */
+}
+
+.iet-expand-btn,
+.iet-collapse-btn {
+  /* Отображаем как инлайн-блок рядом с текстом или как блок под текстом */
+  display: inline-block; /* Или block, если нужно под текстом */
+  margin-top: 5px;    /* Небольшой отступ сверху, если кнопка блочная */
+  margin-left: 0px;   /* Сброс отступа слева, если кнопка блочная */
+  background: none;
+  border: none;
+  color: #007bff; /* Цвет ссылки */
+  cursor: pointer;
+  padding: 0;
+  font-size: 0.9em;
+  font-weight: 500;
+  user-select: none;
+  text-decoration: underline;
+}
+
+.iet-expand-btn:hover,
+.iet-collapse-btn:hover {
+  color: #0056b3; /* Затемняем при наведении */
+}

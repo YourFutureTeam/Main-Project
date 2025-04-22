@@ -405,7 +405,7 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
                         {/* Кнопка Добавить / Форма добавления */}
                         {!showAddStartupForm && !showAgreementModal && (
                             <button onClick={() => setShowAddStartupForm(true)} className="add-button add-startup-button" disabled={loadingStartups || updatingOperation}>
-                                + Добавить свой стартап
+                                + Добавить свой стартапПП
                             </button>
                         )}
                         {showAddStartupForm && (
