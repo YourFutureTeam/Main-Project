@@ -1,5 +1,3 @@
-// src/AddVacancyForm.js (ПОЛНЫЙ КОД - Исправлены пропсы и ВОССТАНОВЛЕН JSX)
-
 import React, { useState, useEffect } from 'react';
 import './App.css'; // Убедись, что стили подключены
 
@@ -14,8 +12,10 @@ function AddVacancyForm({ availableStartups, onAdd, onCancel, isLoading }) {
     const [description, setDescription] = useState('');
     const [salary, setSalary] = useState('');
     const [requirements, setRequirements] = useState('');
+    // Новые поля
+    const [workload, setWorkload] = useState('40'); // по умолч, 40
+    const [workFormat, setWorkFormat] = useState('remote'); // по умолч, удаленно
 
-    // Эффект для обновления selectedStartup, если список изменится
     useEffect(() => {
         if (!selectedStartup && availableStartups && availableStartups.length > 0) {
             setSelectedStartup(availableStartups[0].id.toString());
@@ -28,8 +28,15 @@ function AddVacancyForm({ availableStartups, onAdd, onCancel, isLoading }) {
     // Обработчик отправки формы
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!selectedStartup || !title.trim() || !description.trim() || !requirements.trim()) {
-            alert('Заполните все обязательные поля (Стартап, Название, Описание, Требования).');
+        if (
+            !selectedStartup ||
+            !title.trim() ||
+            !description.trim() ||
+            !requirements.trim() ||
+            !workload ||
+            !workFormat
+        ) {
+            alert('Заполните все обязательные поля (Стартап, Название, Описание, Требования, Тип занятости, Формат работы).');
             return;
         }
         onAdd({
@@ -37,11 +44,12 @@ function AddVacancyForm({ availableStartups, onAdd, onCancel, isLoading }) {
             title: title.trim(),
             description: description.trim(),
             salary: salary.trim() || null,
-            requirements: requirements.trim()
+            requirements: requirements.trim(),
+            workload: workload, // нов
+            work_format: workFormat, // нов
         });
     };
 
-    // --- НАЧАЛО ВОССТАНОВЛЕННОГО JSX ДЛЯ ФОРМЫ ---
     return (
         <form onSubmit={handleSubmit} className="add-vacancy-form add-form">
             <h3>Добавить новую вакансию</h3>
@@ -116,6 +124,39 @@ function AddVacancyForm({ availableStartups, onAdd, onCancel, isLoading }) {
                 />
             </div>
 
+            {/* Поле Тип занятости */}
+            <div className="form-field">
+                <label htmlFor="vacancy-workload">Тип занятости:</label>
+                <select
+                  id="vacancy-workload"
+                  value={workload}
+                  onChange={e => setWorkload(e.target.value)}
+                  required
+                  disabled={isLoading}
+                >
+                  <option value="20">20 часов в неделю</option>
+                  <option value="30">30 часов в неделю</option>
+                  <option value="40">40 часов в неделю</option>
+                  <option value="flexible">По договоренности</option>
+                </select>
+            </div>
+
+            {/* Поле Формат работы */}
+            <div className="form-field">
+                <label htmlFor="vacancy-workformat">Формат работы:</label>
+                <select
+                  id="vacancy-workformat"
+                  value={workFormat}
+                  onChange={e => setWorkFormat(e.target.value)}
+                  required
+                  disabled={isLoading}
+                >
+                  <option value="remote">Удаленно</option>
+                  <option value="office">В офисе</option>
+                  <option value="hybrid">Гибрид</option>
+                </select>
+            </div>
+
              {/* Поле Зарплата (опционально) */}
              <div className="form-field">
                 <label htmlFor="vacancy-salary">Зарплата (опционально):</label>
@@ -148,7 +189,6 @@ function AddVacancyForm({ availableStartups, onAdd, onCancel, isLoading }) {
             </div>
         </form>
     );
-    // --- КОНЕЦ ВОССТАНОВЛЕННОГО JSX ---
 }
 
 export default AddVacancyForm;
