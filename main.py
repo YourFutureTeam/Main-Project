@@ -706,6 +706,47 @@ def reject_vacancy(vacancy_id):
     try: db.session.commit(); return jsonify({"message": "Rejected", "vacancy": serialize_vacancy(vacancy)})
     except Exception as e: db.session.rollback(); print(f"Error: {e}"); return jsonify({"error": "DB Error"}), 500
 
+# Внутри файла main.py
+
+# ... (другие эндпоинты для вакансий) ...
+
+@app.route("/vacancies/<int:vacancy_id>", methods=["DELETE"]) # Новый эндпоинт
+@jwt_required() # Требуем аутентификацию
+def delete_vacancy(vacancy_id):
+    current_user = get_current_user()
+    if not current_user:
+        return jsonify({"error": "Пользователь не найден"}), 404 # Или 401, если JWT валиден, но юзера нет
+
+    vacancy = Vacancy.query.get(vacancy_id)
+    if not vacancy:
+        return jsonify({"error": "Вакансия не найдена"}), 404
+
+    # --- Проверка прав доступа ---
+    # Удалить может либо админ, либо создатель этой вакансии
+    is_admin = current_user.role == 'admin'
+    is_owner = vacancy.creator_user_id == current_user.id
+
+    if not (is_admin or is_owner):
+        # Если не админ и не владелец - доступ запрещен
+        print(f"Attempt to delete vacancy {vacancy_id} by user {current_user.id} denied (not admin or owner).")
+        return jsonify({"error": "У вас нет прав на удаление этой вакансии"}), 403
+    # --- Конец проверки прав ---
+
+    try:
+        # Права есть, удаляем вакансию
+        db.session.delete(vacancy)
+        db.session.commit()
+        print(f"Vacancy {vacancy_id} deleted by user {current_user.id} (Admin: {is_admin}, Owner: {is_owner}).")
+        return jsonify({"message": "Вакансия успешно удалена"}), 200 # Или 204 No Content
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error deleting vacancy {vacancy_id}: {e}")
+        return jsonify({"error": "Ошибка сервера при удалении вакансии"}), 500
+
+# ... (остальной код main.py) ...
+
+
+
 
 # --- Инициализация БД и создание админа ---
 def init_database():
