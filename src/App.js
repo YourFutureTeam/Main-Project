@@ -49,7 +49,7 @@ function AppContent({ token, username, userId, userRole, onLogout }) {
     const authFetch = useCallback(async (url, options = {}) => {
         const headers = { 'Content-Type': 'application/json', ...options.headers, 'Authorization': `Bearer ${token}` };
         try {
-            const response = await fetch(`http://127.0.0.1:5000${url}`, { ...options, headers });
+            const response = await fetch(`https://ur-future.ru:5000${url}`, { ...options, headers });
             const data = await response.json().catch(() => ({})); // Пытаемся парсить JSON, иначе пустой объект
             if (!response.ok) {
                 // Если ошибка аутентификации или профиль не найден - разлогиниваем

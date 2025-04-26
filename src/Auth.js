@@ -1,10 +1,10 @@
-// src/Auth.js (Примерная структура - добавлены initialMode)
-
 import React, { useState, useEffect } from 'react';
 // ... другие импорты
 
-export function Auth({ onLoginSuccess, initialMode = 'login' }) { // Принимаем initialMode
-  // Устанавливаем начальное состояние формы на основе initialMode
+// Важно! Используем полный URL API-сервера на порту 5000
+const API_BASE_URL = 'https://ur-future.ru:5000'; // URL вашего сервера с портом Python-бэкенда
+
+export function Auth({ onLoginSuccess, initialMode = 'login' }) {
   const [isLogin, setIsLogin] = useState(initialMode === 'login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -24,13 +24,30 @@ export function Auth({ onLoginSuccess, initialMode = 'login' }) { // Прини�
     const endpoint = isLogin ? '/login' : '/register';
     const payload = { username, password };
 
+    console.log(`Отправка запроса на: ${API_BASE_URL}${endpoint}`);
+
     try {
-        const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
+            mode: 'cors',  // Явно указываем режим CORS
         });
-        const data = await response.json();
+        
+        // Для отладки
+        console.log('Статус ответа:', response.status);
+        
+        // Получаем текст ответа для анализа
+        const textResponse = await response.text();
+        console.log('Текст ответа:', textResponse);
+        
+        // Пытаемся преобразовать в JSON
+        let data;
+        try {
+            data = JSON.parse(textResponse);
+        } catch (e) {
+            throw new Error(`Сервер вернул некорректный формат (${response.status}): ${textResponse.substring(0, 100)}...`);
+        }
 
         if (!response.ok) {
             throw new Error(data.error || `Ошибка ${isLogin ? 'входа' : 'регистрации'}`);
@@ -51,7 +68,7 @@ export function Auth({ onLoginSuccess, initialMode = 'login' }) { // Прини�
         }
     } catch (err) {
         setError(err.message);
-        console.error(err);
+        console.error('Ошибка:', err);
     } finally {
         setLoading(false);
     }

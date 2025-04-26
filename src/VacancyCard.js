@@ -181,7 +181,7 @@ function VacancyCard({
                 {vacancy.applicants.map((applicant, index) => (
                   <li key={applicant.user_id || index} className="applicant-detail-item">
                     <span className="applicant-tg">
-                      {isOwner ? `@${applicant.telegram || 'нет TG'}` : '[TG скрыт]'}
+                      {isOwner ? `${applicant.telegram || 'нет TG'}` : '[TG скрыт]'}
                     </span>
                     {applicant.resume_link ? ( <a href={applicant.resume_link} target="_blank" rel="noopener noreferrer" className="resume-link creator-contact creator-resume">Резюме</a> ) : ( <span className="no-resume creator-contact creator-resume">Нет резюме</span> )}
                   </li>

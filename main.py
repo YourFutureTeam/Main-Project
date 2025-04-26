@@ -19,7 +19,10 @@ from sqlalchemy import or_, desc # Добавил desc для сортировк
 app = Flask(__name__)
 
 # 2. CORS
-CORS(app, supports_credentials=True) # Добавил supports_credentials на всякий случай
+CORS(app, origins=["https://ur-future.ru", "http://ur-future.ru", "http://localhost:3000"], 
+     supports_credentials=True,
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"])
 
 # 3. Конфигурация
 basedir = os.path.abspath(os.path.dirname(__file__))

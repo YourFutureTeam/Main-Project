@@ -65,3 +65,4 @@ Thumbs.db
 
 # Qodo tooling/history/database
 .qodo/
+.qodo

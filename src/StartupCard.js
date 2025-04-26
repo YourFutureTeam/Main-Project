@@ -130,8 +130,8 @@ function StartupCard({
              <span className="card-creator">от {startup.creator_username || 'N/A'}</span>
              {(startup.creator_telegram || startup.creator_resume_link) && (
                  <div className="creator-contact-links">
-                     {startup.creator_telegram && (<a href={`https://t.me/${startup.creator_telegram.substring(1)}`} target="_blank" rel="noopener noreferrer" className='creator-contact creator-telegram' title={`Telegram: ${startup.creator_telegram}`}>✈️ {startup.creator_telegram}</a>)}
-                     {startup.creator_resume_link && (<a href={startup.creator_resume_link} target="_blank" rel="noopener noreferrer" className='creator-contact creator-resume' title="Резюме">📄 Резюме</a>)}
+                     {startup.creator_telegram && (<a href={`https://t.me/${startup.creator_telegram.substring(1)}`} target="_blank" rel="noopener noreferrer" className='creator-contact creator-telegram' title={`Telegram: ${startup.creator_telegram}`}> {startup.creator_telegram}</a>)}
+                     {startup.creator_resume_link && (<a href={startup.creator_resume_link} target="_blank" rel="noopener noreferrer" className='creator-contact creator-resume' title="Резюме"> Резюме</a>)}
                  </div>
              )}
          </div>
@@ -269,7 +269,7 @@ function StartupCard({
                      {startup.status === 'approved' && startup.opensea_link && isValidUrl(startup.opensea_link) && (
                         <div className="startup-section opensea-link-section">
                             <a href={startup.opensea_link} target="_blank" rel="noopener noreferrer" className="opensea-button button-link">
-                                Membership Tokens
+                            Купить долю в проекте
                             </a>
                         </div>
                      )}
